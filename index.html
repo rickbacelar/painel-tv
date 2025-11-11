@@ -302,7 +302,7 @@ setInterval(loadAll, REFRESH_MS);
 // --- Forçar reload completo da página a cada 10s (10000 ms)
 // Usa location.replace com um parâmetro _=timestamp para forçar cache-busting
 // e não poluir o histórico do navegador.
-const RELOAD_MS = 10000;
+const RELOAD_MS = 600000;
 setInterval(() => {
   // monta a URL atual sem o parâmetro _ antigo
   const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
