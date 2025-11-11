@@ -298,6 +298,18 @@ function renderAll(){
 // inicialização
 loadAll();
 setInterval(loadAll, REFRESH_MS);
+
+// --- Forçar reload completo da página a cada 10s (10000 ms)
+// Usa location.replace com um parâmetro _=timestamp para forçar cache-busting
+// e não poluir o histórico do navegador.
+const RELOAD_MS = 10000;
+setInterval(() => {
+  // monta a URL atual sem o parâmetro _ antigo
+  const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
+  const separator = urlBase.includes('?') ? '&' : '?';
+  const newUrl = urlBase + separator + '_=' + Date.now();
+  window.location.replace(newUrl);
+}, RELOAD_MS);
 </script>
 </body>
 </html>
