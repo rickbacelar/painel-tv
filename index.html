@@ -268,7 +268,7 @@ function renderAll(){
             <th>Valor Feito</th>
           </tr></thead>
           <tbody>
-            ${parsed.reverse().map(r=>`
+            ${parsed.map(r=>`
               <tr>
                 <td>${r["Data"]}</td>
                 <td>${formatBR(toNumber(r["Valor Feito"]))}</td>
