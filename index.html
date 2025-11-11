@@ -196,11 +196,17 @@ function toNumber(v){
 
 async function fetchAndParse(url){
   try{
-    const res=await fetch(url+"&nocache="+Date.now());
-    if(!res.ok) throw new Error("HTTP "+res.status);
+    // adiciona parâmetro único para burlar cache do Google
+    const fullUrl = url + "&nocache=" + Date.now() + "_" + Math.random();
+    const res = await fetch(fullUrl, { cache: "no-store" });
+    if(!res.ok) throw new Error("HTTP " + res.status);
     return parseCSV(await res.text());
-  }catch(e){ console.error(e); return null;}
+  }catch(e){
+    console.error("Erro ao buscar dados:", e);
+    return null;
+  }
 }
+
 
 function formatBR(value){
   return value?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0})||"R$ 0";
