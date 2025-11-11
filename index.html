@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painel de Resultados - Todos Conselhos</title>
+<style>
+:root{--orange:#FF6B00; --dark:#2E2E2E; --bg:#F5F5F6; --card:#ffffff; --muted:#777;}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--dark);}
+.app{display:flex;flex-direction:column;height:100%;}
+header{background:linear-gradient(90deg,var(--dark),#444);color:white;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
+.header-title{display:flex;gap:12px;align-items:center;font-weight:700;font-size:18px}
+.logo-dot{width:16px;height:16px;border-radius:4px;background:var(--orange);box-shadow:0 2px 6px rgba(255,107,0,0.28)}
+.main{flex:1;display:flex;flex-wrap:wrap;gap:18px;padding:18px;}
+.card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,0.06);flex:1 1 300px;max-width:480px;}
+.title{font-size:16px;color:var(--muted);margin-bottom:8px;font-weight:700;}
+.big{font-size:28px;font-weight:700;color:var(--dark);}
+.table-wrap{overflow:auto;max-height:300px;}
+.table{width:100%;border-collapse:collapse;margin-top:8px;}
+.table th{text-align:left;padding:8px;font-size:12px;color:var(--muted);border-bottom:1px solid #eee}
+.table td{padding:6px;border-bottom:1px dashed #f0f0f0;font-size:14px}
+.footer{padding:10px 18px;text-align:right;color:var(--muted);font-size:13px}
+.center{display:flex;align-items:center;justify-content:center;height:100%}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-title"><div class="logo-dot"></div><div>Painel de Resultados</div></div>
+    <div class="header-meta">Atualiza quase em tempo real</div>
+  </header>
+
+  <div class="main" id="main-content">
+    <div class="center" id="loading-indicator">Carregando dados...</div>
+  </div>
+
+  <div class="footer">Painel Simplificado • Laranja & Cinza</div>
+</div>
+
+<script>
+// CONFIGURAÇÃO
+const fontes = [
+  { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
+  { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
+  { id: "CREF21", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=2070528577&single=true&output=csv" },
+  { id: "CRTR02", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1484490409&single=true&output=csv" },
+  { id: "CRTR08", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1600799136&single=true&output=csv" },
+  { id: "CRTR15", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1264950541&single=true&output=csv" },
+  { id: "CRN11", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1667393760&single=true&output=csv" }
+];
+
+const REFRESH_MS = 5000; // atualização de dados a cada 5s
+let cache = {};
+
+// FUNÇÕES
+function parseCSV(text) {
+  const rows=[];
+  const lines=text.split(/\r?\n/).filter(l=>l.trim()!=="");
+  for(const line of lines){
+    const cols=[];
+    let cur="", inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch=='"'){inQ=!inQ; continue;}
+      if(ch==',' && !inQ){cols.push(cur); cur=""; continue;}
+      cur+=ch;
+    }
+    cols.push(cur);
+    rows.push(cols.map(c=>c.trim()));
+  }
+  return rows;
+}
+
+function toNumber(v){
+  if(!v) return 0;
+  const cleaned=String(v).replace(/[^0-9\-\,\.]/g,"").replace(/\./g,"").replace(/,/g,".");
+  const n=Number(cleaned);
+  return isNaN(n)?0:n;
+}
+
+async function fetchAndParse(url){
+  try{
+    const res=await fetch(url+"&nocache="+Date.now());
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return parseCSV(await res.text());
+  }catch(e){ console.error(e); return null;}
+}
+
+function formatBR(value){ return value?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0})||"R$ 0"; }
+
+async function loadAll(){
+  for(const f of fontes){
+    const rows = await fetchAndParse(f.url);
+    if(!rows){ cache[f.id]=null; continue; }
+
+    // Pegando Meta Mensal (linha 2, coluna B)
+    const meta = rows[1] && rows[1][1] ? toNumber(rows[1][1]) : 0;
+
+    // Pegando Projeção Mês (linha 6, coluna E)
+    const projRaw = rows[5] && rows[5][4] ? toNumber(rows[5][4]) : 0;
+
+    // Encontrar índice do cabeçalho da tabela de dados
+    let headerIdx = rows.findIndex(r=>r.some(c=>String(c).toLowerCase().includes("data")));
+    if(headerIdx==-1) headerIdx=6; // se não achar, usa linha 7
+
+    const headers = rows[headerIdx].map(h=>h.toString().trim());
+    const dataRows = rows.slice(headerIdx+1).filter(r=>r.length>1 && r[0].trim()!=="");
+    const parsed = dataRows.map(r=>{
+      const obj={};
+      for(let i=0;i<headers.length;i++) obj[headers[i]]=r[i]||"";
+      return obj;
+    });
+
+    // cálculos
+    let total=0;
+    let lastPay=0;
+    parsed.forEach(r=>{
+      const val=toNumber(r["Valor Feito"]);
+      total+=val;
+      if(val>0) lastPay=val;
+    });
+
+    const projPercent = meta ? Math.round((total/meta)*100) : 0;
+
+    cache[f.id]={headers, parsed, meta, projPercent, lastPay};
+  }
+
+  document.getElementById("loading-indicator").style.display="none";
+  renderAll();
+}
+
+function renderAll(){
+  const main=document.getElementById("main-content");
+  main.innerHTML="";
+
+  fontes.forEach(f=>{
+    const data=cache[f.id];
+    const card=document.createElement("div");
+    card.className="card";
+
+    if(!data){ card.innerHTML=`<div class="title">${f.id} (sem dados)</div>`; main.appendChild(card); return; }
+
+    const {parsed, meta, projPercent, lastPay} = data;
+
+    card.innerHTML=`
+      <div class="title">${f.id}</div>
+      <div style="display:flex;gap:12px;margin-bottom:6px">
+        <div><strong>Meta Mês:</strong> ${formatBR(meta)}</div>
+        <div><strong>Projeção:</strong> ${projPercent}%</div>
+        <div><strong>Último Pagamento:</strong> ${formatBR(lastPay)}</div>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr>
+            <th>Data</th>
+            <th>Valor Feito</th>
+          </tr></thead>
+          <tbody>
+            ${parsed.reverse().map(r=>`<tr>
+              <td>${r["Data"]}</td>
+              <td>${formatBR(toNumber(r["Valor Feito"]))}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+    main.appendChild(card);
+  });
+}
+
+// inicial
+loadAll();
+// atualizar a cada REFRESH_MS
+setInterval(loadAll, REFRESH_MS);
+</script>
+</body>
+</html>
