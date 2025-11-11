@@ -25,13 +25,6 @@ html,body{
   flex-direction:column;
   height:100%;
 }
-.logo-img{
-  height:60px;
-  width:auto;
-  object-fit:contain;
-  margin-right:5px;
-  border-radius:4px;
-}
 header{
   background:linear-gradient(90deg,var(--dark),#444);
   color:white;
@@ -42,17 +35,23 @@ header{
 }
 .header-title{
   display:flex;
-  gap:12px;
   align-items:center;
+  gap:10px;
   font-weight:700;
   font-size:18px;
 }
 .logo-dot{
-  width:16px;
-  height:16px;
+  width:14px;
+  height:14px;
   border-radius:4px;
   background:var(--orange);
   box-shadow:0 2px 6px rgba(255,107,0,0.28);
+}
+.logo-img{
+  height:38px;
+  width:auto;
+  object-fit:contain;
+  margin-right:6px;
 }
 
 /* layout principal */
@@ -62,11 +61,11 @@ header{
   flex-wrap:wrap;
   gap:18px;
   padding:18px;
-  align-items:stretch; /* garante altura igual dos cards */
+  align-items:stretch;
   justify-content:center;
 }
 
-/* cada card */
+/* cards */
 .card{
   background:var(--card);
   border-radius:12px;
@@ -80,23 +79,19 @@ header{
   min-height:0;
 }
 
-/* títulos e textos */
+/* título do conselho */
 .title{
-  font-size:16px;
-  color:var(--muted);
-  margin-bottom:8px;
-  font-weight:700;
-}
-.big{
-  font-size:28px;
-  font-weight:700;
+  text-align:center;
+  font-size:18px;
   color:var(--dark);
+  margin-bottom:10px;
+  font-weight:700;
 }
 
 /* área da tabela */
 .table-wrap{
   flex:1;
-  overflow:auto; /* só aparece se for realmente necessário */
+  overflow:auto;
   margin-top:6px;
 }
 .table{
@@ -137,9 +132,10 @@ header{
   <header>
     <div class="header-title">
       <img src="logo.png" alt="Logo Onze Soluções" class="logo-img">
-      <div><div class="logo-dot"></div>Painel de Resultados</div>
+      <div class="logo-dot"></div>
+      <div>Painel de Resultados</div>
     </div>
-    
+    <div class="header-meta">Atualiza quase em tempo real</div>
   </header>
 
   <div class="main" id="main-content">
@@ -161,7 +157,7 @@ const fontes = [
   { id: "CRN11", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1667393760&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 5000; // atualização de dados a cada 5s
+const REFRESH_MS = 5000;
 let cache = {};
 
 // FUNÇÕES AUXILIARES
@@ -208,13 +204,10 @@ async function loadAll(){
     const rows = await fetchAndParse(f.url);
     if(!rows){ cache[f.id]=null; continue; }
 
-    // Pegando Meta Mensal (linha 2, coluna B)
     const meta = rows[1] && rows[1][1] ? toNumber(rows[1][1]) : 0;
 
-    // Pegando Projeção Mês (linha 6, coluna E)
     const projRaw = rows[5] && rows[5][4] ? toNumber(rows[5][4]) : 0;
 
-    // Encontrar índice do cabeçalho da tabela de dados
     let headerIdx = rows.findIndex(r=>r.some(c=>String(c).toLowerCase().includes("data")));
     if(headerIdx==-1) headerIdx=6;
 
@@ -243,7 +236,7 @@ async function loadAll(){
   renderAll();
 }
 
-// RENDERIZAÇÃO DOS CARDS
+// RENDERIZAÇÃO
 function renderAll(){
   const main=document.getElementById("main-content");
   main.innerHTML="";
@@ -263,10 +256,10 @@ function renderAll(){
 
     card.innerHTML=`
       <div class="title">${f.id}</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;justify-content:center;text-align:center;">
         <div><strong>Meta Mês:</strong> ${formatBR(meta)}</div>
         <div><strong>Projeção:</strong> ${projPercent}%</div>
-        <div><strong>Último Pagamento:</strong> ${formatBR(lastPay)}</div>
+        <div><strong>Pagos Hoje:</strong> ${formatBR(lastPay)}</div>
       </div>
       <div class="table-wrap">
         <table class="table">
