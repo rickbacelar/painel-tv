@@ -25,6 +25,13 @@ html,body{
   flex-direction:column;
   height:100%;
 }
+.logo-img{
+  height:32px;
+  width:auto;
+  object-fit:contain;
+  margin-right:10px;
+  border-radius:4px;
+}
 header{
   background:linear-gradient(90deg,var(--dark),#444);
   color:white;
@@ -129,10 +136,10 @@ header{
 <div class="app">
   <header>
     <div class="header-title">
-      <div class="logo-dot"></div>
-      <div>Painel de Resultados</div>
+      <img src="logo.png" alt="Logo Onze Soluções" class="logo-img">
+      <div><div class="logo-dot"></div>Painel de Resultados</div>
     </div>
-    <div class="header-meta">Atualiza quase em tempo real</div>
+    
   </header>
 
   <div class="main" id="main-content">
