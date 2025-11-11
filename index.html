@@ -16,7 +16,9 @@ header{background:linear-gradient(90deg,var(--dark),#444);color:white;padding:12
 .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,0.06);flex:1 1 300px;max-width:480px;}
 .title{font-size:16px;color:var(--muted);margin-bottom:8px;font-weight:700;}
 .big{font-size:28px;font-weight:700;color:var(--dark);}
-.table-wrap{overflow:auto;max-height:300px;}
+.table-wrap{overflow:visible;
+  max-height:none;
+}
 .table{width:100%;border-collapse:collapse;margin-top:8px;}
 .table th{text-align:left;padding:8px;font-size:12px;color:var(--muted);border-bottom:1px solid #eee}
 .table td{padding:6px;border-bottom:1px dashed #f0f0f0;font-size:14px}
