@@ -5,31 +5,59 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Painel de Resultados - MC Soluções</title>
 <style>
-:root{--orange:#FF6B00;--dark:#2E2E2E;--bg:#F5F5F6;--card:#FFFFFF;--muted:#8A8A8A;}
+:root{
+  --orange:#FF6B00;
+  --dark:#2E2E2E;
+  --bg:#F5F5F6;
+  --card:#FFFFFF;
+  --muted:#8A8A8A;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--dark);}
 .app{display:flex;flex-direction:column;height:100%;}
-header{background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);color:white;padding:20px 40px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
-.header-title{display:flex;align-items:center;gap:20px;font-weight:800;font-size:48px;letter-spacing:0.5px;}
-.logo-dot{width:24px;height:24px;border-radius:6px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
-.logo-img{height:150px;width:auto;object-fit:contain;background:#fff;border-radius:10px;padding:8px;box-shadow:0 0 15px rgba(0,0,0,0.2);}
-.main{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:40px;padding:40px;}
-.card{background:var(--card);border-radius:24px;padding:36px;box-shadow:0 10px 25px rgba(0,0,0,0.08);flex:1 1 460px;max-width:560px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-top:8px solid var(--orange);transition:transform 0.3s ease,box-shadow 0.3s ease;}
-.card:hover{transform:translateY(-4px);box-shadow:0 14px 35px rgba(0,0,0,0.12);}
-.title{font-size:46px;color:var(--dark);font-weight:900;margin-bottom:28px;text-transform:uppercase;letter-spacing:1px;}
-.info{display:flex;flex-direction:column;gap:16px;font-size:38px;font-weight:600;color:var(--dark);}
-.info strong{color:var(--orange);font-weight:800;}
+header{
+  background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);
+  color:white;
+  padding:10px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+.header-title{display:flex;align-items:center;gap:10px;font-weight:800;font-size:28px;letter-spacing:0.5px;}
+.logo-dot{width:16px;height:16px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
+.logo-img{height:80px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
+.main{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px;padding:20px;overflow-y:auto;}
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.08);
+  flex:1 1 220px;
+  max-width:280px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  border-top:6px solid var(--orange);
+  transition:transform 0.3s ease,box-shadow 0.3s ease;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,0.12);}
+.title{font-size:22px;color:var(--dark);font-weight:900;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;}
+.info{display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600;color:var(--dark);}
+.info strong{color:var(--orange);font-weight:700;}
 .footer{
-  padding:20px 40px;
-  text-align:center;       /* 🔹 centraliza o texto */
+  padding:10px 20px;
+  text-align:center;
   color:var(--muted);
-  font-size:28px;
+  font-size:16px;
   background:#EFEFEF;
-  border-top:3px solid var(--orange);
+  border-top:2px solid var(--orange);
   font-weight:600;
   letter-spacing:0.5px;
 }
-.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:36px;color:var(--dark);}
+.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:18px;color:var(--dark);}
 </style>
 </head>
 <body>
@@ -64,14 +92,13 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 60000;   // fetch a cada 10s
-const PAGE_RELOAD_MS = 60000; // recarrega a página completamente a cada 1 minuto
+const REFRESH_MS = 60000;   // fetch a cada 60s
+const PAGE_RELOAD_MS = 60000; // recarrega a página a cada 60s
 
 let cache = {};
 
 // ---------- HELPERS ----------
 function parseCSV(text){
-  // parser que respeita aspas e vírgulas internas
   const rows = [];
   let cur = '', row = [], inQuotes = false;
   for (let i=0; i<text.length; i++){
@@ -94,53 +121,31 @@ function parseCSV(text){
   return rows.filter(r => r.some(c => c !== ''));
 }
 
-function normalize(s){
-  if(s===undefined || s===null) return '';
-  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
-}
-
+function normalize(s){ return s? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase() : ''; }
 function toNumber(v){
   if(v===undefined || v===null) return 0;
   if(typeof v === 'number') return isFinite(v)?v:0;
   let s = String(v).trim();
   if(!s) return 0;
   s = s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
-  // lidar com milhar e decimal
-  if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){
-    s = s.replace(/\./g,'').replace(/,/g,'.'); // 30.000,00 -> 30000.00
-  } else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){
-    s = s.replace(/,/g,'.'); // 30000,50 -> 30000.50
-  } else {
-    s = s.replace(/\./g,''); // 30000 or 30.000 -> 30000
-  }
+  if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){ s = s.replace(/\./g,'').replace(/,/g,'.'); }
+  else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){ s = s.replace(/,/g,'.'); }
+  else { s = s.replace(/\./g,''); }
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
-
-function formatBR(v){
-  return v?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}) || 'R$ 0';
-}
-
+function formatBR(v){ return v?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}) || 'R$ 0'; }
 async function fetchAndParse(url){
-  try{
-    const res = await fetch(url + "&nocache=" + Date.now(), { cache: 'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const txt = await res.text();
-    const rows = parseCSV(txt);
-    return rows;
-  }catch(e){
-    console.error('fetch error for', url, e);
-    return null;
-  }
+  try{ const res = await fetch(url + "&nocache=" + Date.now(), { cache: 'no-store' });
+       if(!res.ok) throw new Error('HTTP ' + res.status);
+       return parseCSV(await res.text());
+  }catch(e){ console.error('fetch error for', url, e); return null; }
 }
 
-// ---------- lógica específica para seu formato ----------
 function findExactHeader(rows){
-  // procura de forma explícita a linha que contenha "Dias Trabalhados" ou que contenha "Pago Total" etc
   for(let i=0;i<rows.length;i++){
     const norm = rows[i].map(c => normalize(c));
-    // condição: linha que contenha pelo menos um desses títulos
-    if(norm.some(c => c.includes('dias trabalh') || c.includes('pago total') || c.includes('pago hoje') || c.includes('projecao') || c.includes('projecao mes') || c.includes('projecao m') || c.includes('projecao'))){
+    if(norm.some(c => c.includes('dias trabalh') || c.includes('pago total') || c.includes('pago hoje') || c.includes('projecao'))){
       return { headerIdx: i, norm };
     }
   }
@@ -153,71 +158,22 @@ async function loadAll(){
     const rows = await fetchAndParse(f.url);
     if(!rows){ cache[f.id] = null; continue; }
 
-    // debug: mostrar primeiras linhas no console (útil para ver o CSV bruto)
-    console.log('---', f.id, 'rows sample:', rows.slice(0,8));
-
-    // meta mensal (procura linha onde a primeira célula contenha "meta" ou "meta mensal")
     const metaRow = rows.find(r => normalize(r[0]).includes('meta'));
     const meta = metaRow ? toNumber(metaRow[1]) : 0;
 
-    // procurar cabeçalho exato (o cabeçalho com Dias Trabalhados / Dias do Mês / Projeção Mês / Pago Total / Pago Hoje)
     const headerInfo = findExactHeader(rows);
     let total = 0, lastPay = 0, projPercent = 0;
     if(headerInfo){
       const { headerIdx, norm } = headerInfo;
       const dataRow = rows[headerIdx + 1] || [];
-      // achar índices por matching estrito de nomes vistos no seu exemplo
-      const idxProj = norm.findIndex(c => c.includes('projecao') || c.includes('projecao mes') || c.includes('projecao m') || c.includes('projecao_m'));
-      const idxTotal = norm.findIndex(c => c.includes('pago total') || c.includes('valor total') || c.includes('valor total captado') || c.includes('pago_total'));
-      const idxHoje  = norm.findIndex(c => c.includes('pago hoje') || c.includes('pagos hoje') || c.includes('pagohoje') || c.includes('pago_hoje'));
-
-      // logs para debugging
-      console.log(`${f.id} headerIdx=${headerIdx} mapping proj:${idxProj}, total:${idxTotal}, hoje:${idxHoje}`, 'header row:', norm, 'dataRow:', dataRow);
+      const idxProj = norm.findIndex(c => c.includes('projecao'));
+      const idxTotal = norm.findIndex(c => c.includes('pago total') || c.includes('valor total'));
+      const idxHoje  = norm.findIndex(c => c.includes('pago hoje'));
 
       if(idxTotal >= 0) total = toNumber(dataRow[idxTotal]);
       if(idxHoje  >= 0) lastPay = toNumber(dataRow[idxHoje]);
-      if(idxProj  >= 0) {
-        // projRaw pode ser valor absoluto (R$) ou porcentagem. Preferimos calcular % via meta quando possível.
-        const projRaw = toNumber(dataRow[idxProj]);
-        // se projRaw parece um valor monetário (maior que meta), preferir usar meta->% posterior
-        // aqui apenas guardamos projRaw; projPercent será calculado abaixo
-        projPercent = projRaw; // fallback
-      }
-
-      // se total parece zerado (0), tentar heurística: procurar maior número na dataRow
-      if((!total || total === 0) && dataRow.length){
-        const nums = dataRow.map(c=>toNumber(c));
-        let max = 0, maxIdx = -1;
-        for(let i=0;i<nums.length;i++){ if(nums[i] > max){ max = nums[i]; maxIdx = i; } }
-        if(maxIdx !== -1){
-          console.log(`${f.id} heuristic pick: index ${maxIdx} value ${max}`);
-          total = max;
-          // se hoje estava vazio, tentar pegar último número como hoje
-          if(!lastPay){
-            const lastNum = nums[nums.length-1] || 0;
-            if(lastNum && lastNum !== total) lastPay = lastNum;
-          }
-        }
-      }
-
-      // calcular projPercent a partir do total e meta (se meta disponível)
-      projPercent = meta ? Math.round((total / meta) * 100) : (projPercent || 0);
-    } else {
-      // fallback global: pegar última linha de dados e tirar maiores valores
-      for(let i = rows.length - 1; i >= 0; i--){
-        const line = rows[i].map(c=>c.trim()).filter(c=>c!=='');
-        if(line.length >= 2){
-          const nums = line.map(c=>toNumber(c)).filter(n=>n>0);
-          if(nums.length){
-            nums.sort((a,b)=>b-a);
-            total = nums[0] || 0;
-            lastPay = nums[nums.length-1] || 0;
-            break;
-          }
-        }
-      }
+      if(idxProj  >= 0) projPercent = meta ? Math.round((toNumber(dataRow[idxProj])/meta)*100) : 0;
     }
-
     cache[f.id] = { meta, total, projPercent, lastPay };
   }
 
@@ -232,11 +188,7 @@ function renderAll(){
     const d = cache[f.id];
     const card = document.createElement('div');
     card.className = 'card';
-    if(!d){
-      card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`;
-      main.appendChild(card);
-      continue;
-    }
+    if(!d){ card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`; main.appendChild(card); continue; }
     card.innerHTML = `
       <div class="title">${f.id}</div>
       <div class="info">
@@ -253,14 +205,7 @@ function renderAll(){
 // inicializa e agendamento
 loadAll();
 setInterval(loadAll, REFRESH_MS);
-
-// reload completo a cada PAGE_RELOAD_MS para burlar cache do Google (15s)
-setInterval(()=>{
-  const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
-  const separator = urlBase.includes('?') ? '&' : '?';
-  const newUrl = urlBase + separator + '_=' + Date.now();
-  window.location.replace(newUrl);
-}, PAGE_RELOAD_MS);
+setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, PAGE_RELOAD_MS);
 </script>
 </body>
 </html>
