@@ -24,6 +24,68 @@ header{
   justify-content:space-between;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* impede rolagem */
+  background: #f5f5f5;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container-destaque {
+  width: 90vw; /* reduz largura pra caber bem na TV */
+  max-width: 1200px;
+  height: 85vh; /* diminui um pouco a altura pra evitar scroll */
+  background: linear-gradient(180deg, #ff7b00, #ff5e00);
+  border-radius: 30px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+}
+
+.container-destaque h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.foto-destaque {
+  width: 220px; /* estava grande demais antes */
+  height: 220px;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+  object-fit: cover;
+  margin-bottom: 25px;
+}
+
+.nome-destaque {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.mensagem-destaque {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin-top: 15px;
+}
+
+.estrelas {
+  font-size: 1.8rem;
+  color: gold;
+  margin: 5px 0;
+}
+
 .header-title{display:flex;align-items:center;gap:30px;font-weight:900;font-size:48px;letter-spacing:1px;}
 .logo-dot{width:30px;height:30px;border-radius:4px;background:var(--orange);box-shadow:0 4px 12px rgba(255,107,0,0.5);}
 .logo-img{height:150px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:6px;box-shadow:0 0 12px rgba(0,0,0,0.2);}
