@@ -217,7 +217,7 @@ loadAll();
 setInterval(loadAll, REFRESH_MS);
 
 // === RECARREGAR PÁGINA A CADA 15 SEGUNDOS ===
-const PAGE_RELOAD_MS = 15000;
+const PAGE_RELOAD_MS = 45000;
 setInterval(()=>{
   const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
   const separator = urlBase.includes('?') ? '&' : '?';
