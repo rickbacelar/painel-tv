@@ -171,38 +171,55 @@ const fontes = [
 let cache = {};
 const REFRESH_MS = 10000;
 
-// === FUNÇÕES ===
-function parseCSV(text){return text.split(/\r?\n/).map(l=>l.split(",").map(c=>c.replace(/"/g,"").trim())).filter(r=>r.length>1);}
-function toNumber(v){if(!v)return 0;const cleaned=v.replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(/,/g,".");return parseFloat(cleaned)||0;}
-function formatBR(v){return v?.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0})||"R$ 0";}
-async function fetchAndParse(url){try{const res=await fetch(url+"&nocache="+Date.now(),{cache:"no-store"});if(!res.ok)throw new Error(res.status);return parseCSV(await res.text());}catch(e){console.error("Erro:",e);return null;}}
+function parseCSV(text){
+  return text.split(/\r?\n/).map(l=>l.split(",").map(c=>c.replace(/"/g,"").trim())).filter(r=>r.length>1);
+}
+function toNumber(v){
+  if(!v) return 0;
+  const cleaned=v.replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(/,/g,".");
+  return parseFloat(cleaned)||0;
+}
+function formatBR(v){
+  return v?.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0})||"R$ 0";
+}
+async function fetchAndParse(url){
+  try{
+    const res=await fetch(url+"&nocache="+Date.now(),{cache:"no-store"});
+    if(!res.ok)throw new Error(res.status);
+    return parseCSV(await res.text());
+  }catch(e){console.error("Erro:",e);return null;}
+}
 
 // === CARREGAMENTO ===
 async function loadAll(){
   for(const f of fontes){
-    const rows=await fetchAndParse(f.url);
-    if(!rows){cache[f.id]=null;continue;}
+    const rows = await fetchAndParse(f.url);
+    if(!rows){ cache[f.id] = null; continue; }
 
-    const metaRow=rows.find(r=>r[0]?.toLowerCase().includes("meta"));
-    const meta=metaRow?toNumber(metaRow[1]):0;
+    const metaRow = rows.find(r => r[0]?.toLowerCase().includes("meta"));
+    const meta = metaRow ? toNumber(metaRow[1]) : 0;
 
-    const headerRow=rows.find(r=>r.some(c=>c.toLowerCase().includes("pago total")));
-    const headerIdx=rows.indexOf(headerRow);
-    const dataRow=rows[headerIdx+1]||[];
+    const headerRow = rows.find(r =>
+      r.some(c => c.toLowerCase().includes("pago total")) &&
+      r.some(c => c.toLowerCase().includes("pago hoje"))
+    );
+    const headerIdx = rows.indexOf(headerRow);
+    const dataRow = rows[headerIdx + 1] || [];
 
-    const colPagoTotal=headerRow?.findIndex(c=>c.toLowerCase().includes("pago total"))??-1;
-    const colPagoHoje=headerRow?.findIndex(c=>c.toLowerCase().includes("pago hoje"))??-1;
-    const colProj=headerRow?.findIndex(c=>c.toLowerCase().includes("proj"))??-1;
+    const colProj = headerRow?.findIndex(c => c.toLowerCase().includes("proj")) ?? -1;
+    const colPagoTotal = headerRow?.findIndex(c => c.toLowerCase().includes("pago total")) ?? -1;
+    const colPagoHoje = headerRow?.findIndex(c => c.toLowerCase().includes("pago hoje")) ?? -1;
 
-    const total=colPagoTotal>=0?toNumber(dataRow[colPagoTotal]):0;
-    const lastPay=colPagoHoje>=0?toNumber(dataRow[colPagoHoje]):0;
-    const projRaw=colProj>=0?toNumber(dataRow[colProj]):0;
-    const projPercent=meta?Math.round((total/meta)*100):(projRaw?Math.round(projRaw/meta*100):0);
+    const projRaw = colProj >= 0 ? toNumber(dataRow[colProj]) : 0;
+    const total = colPagoTotal >= 0 ? toNumber(dataRow[colPagoTotal]) : 0;
+    const lastPay = colPagoHoje >= 0 ? toNumber(dataRow[colPagoHoje]) : 0;
 
-    cache[f.id]={meta,total,projPercent,lastPay};
+    const projPercent = meta ? Math.round((total / meta) * 100) : 0;
+
+    cache[f.id] = { meta, total, projPercent, lastPay };
   }
 
-  document.getElementById("loading-indicator").style.display="none";
+  document.getElementById("loading-indicator").style.display = "none";
   renderAll();
 }
 
@@ -232,8 +249,6 @@ function renderAll(){
 
 loadAll();
 setInterval(loadAll, REFRESH_MS);
-
-// === RELOAD A CADA 15s ===
 setInterval(()=>location.reload(),15000);
 </script>
 </body>
