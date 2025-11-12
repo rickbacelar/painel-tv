@@ -1,112 +1,35 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Painel de Resultados - MC Soluções</title>
 <style>
-:root{
-  --orange:#FF6B00;
-  --dark:#2E2E2E;
-  --bg:#F5F5F6;
-  --card:#FFFFFF;
-  --muted:#8A8A8A;
-}
+:root{--orange:#FF6B00;--dark:#2E2E2E;--bg:#F5F5F6;--card:#FFFFFF;--muted:#8A8A8A;}
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--dark);}
-.app{display:flex;flex-direction:column;height:100%;}
-header{
-  background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);
-  color:white;
-  padding:10px 15px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  box-shadow:0 4px 12px rgba(0,0,0,0.3);
-}
-.header-title{display:flex;align-items:center;gap:12px;font-weight:800;font-size:4vw;letter-spacing:0.5px;}
-.logo-dot{width:2vw;height:2vw;border-radius:0.5vw;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
-.logo-img{height:6vw;width:auto;object-fit:contain;background:#fff;border-radius:0.5vw;padding:0.5vw;box-shadow:0 0 10px rgba(0,0,0,0.2);}
-.main{
-  flex:1;
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-  justify-content:center;
-  align-content:center;
-  gap:1vw;
-  padding:1vw;
-  overflow:hidden;
-}
-.card{
-  background:var(--card);
-  border-radius:1vw;
-  padding:1.5vw;
-  box-shadow:0 0.5vw 1.5vw rgba(0,0,0,0.08);
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  border-top:0.5vw solid var(--orange);
-  transition:transform 0.3s ease,box-shadow 0.3s ease;
-}
-.card:hover{transform:translateY(-0.3vw);box-shadow:0 0.7vw 2vw rgba(0,0,0,0.12);}
-.title{
-  font-size:clamp(18px,3vw,48px);
-  color:var(--dark);
-  font-weight:900;
-  margin-bottom:0.5vw;
-  text-transform:uppercase;
-  letter-spacing:0.2vw;
-}
-.info{
-  display:flex;
-  flex-direction:column;
-  gap:0.5vw;
-  font-size:clamp(14px,2.5vw,32px);
-  font-weight:600;
-  color:var(--dark);
-}
-.info strong{color:var(--orange);font-weight:700;}
-.footer{
-  padding:0.5vw 1vw;
-  text-align:center;
-  color:var(--muted);
-  font-size:clamp(14px,2vw,24px);
-  background:#EFEFEF;
-  border-top:0.3vw solid var(--orange);
-  font-weight:600;
-  letter-spacing:0.2vw;
-}
-.center{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  height:100%;
-  font-size:clamp(16px,3vw,36px);
-  color:var(--dark);
-}
+html,body{height:100%;width:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--dark);}
+.app{display:flex;flex-direction:column;height:100%;width:100%;}
+header{background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);color:white;padding:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.header-title{font-weight:800;font-size:32px;letter-spacing:0.5px;}
+.main{flex:1;display:grid;gap:10px;padding:10px;}
+.card{background:var(--card);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-top:5px solid var(--orange);box-shadow:0 4px 10px rgba(0,0,0,0.1);overflow:hidden;}
+.title{font-weight:900;margin-bottom:5px;}
+.info{display:flex;flex-direction:column;gap:3px;font-weight:600;}
+.info strong{color:var(--orange);}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <div class="header-title">
-      <img src="logo.png" alt="Logo MC Soluções" class="logo-img">
-      <div class="logo-dot"></div>
-      <div>Painel de Resultados</div>
-    </div>
+    <div class="header-title">Painel de Resultados - MC Soluções</div>
   </header>
-
   <div class="main" id="main-content">
     <div class="center" id="loading-indicator">Carregando dados...</div>
   </div>
-
-  <div class="footer">MC Soluções ©</div>
 </div>
 
 <script>
-// ---------- CONFIG ----------
+// Configuração das fontes
 const fontes = [
   { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
   { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
@@ -119,47 +42,22 @@ const fontes = [
   { id: "AMMV - ENEL", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=393476796&single=true&output=csv" },
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
+let cache={};
 
-const REFRESH_MS = 60000;   
-const PAGE_RELOAD_MS = 60000; 
-
-let cache = {};
-
-// Funções parseCSV, normalize, toNumber, formatBR, fetchAndParse, findExactHeader (igual anterior)...
-function parseCSV(text){
-  const rows=[]; let cur='',row=[],inQuotes=false;
-  for(let i=0;i<text.length;i++){
-    const ch=text[i];
-    if(ch==='"'){ if(inQuotes && text[i+1]==='"'){cur+='"';i++;continue;} inQuotes=!inQuotes; continue; }
-    if(!inQuotes && (ch==='\n'||ch==='\r')){ if(cur!==''||row.length){row.push(cur);rows.push(row.map(c=>c.trim()));} cur='';row=[]; if(ch==='\r'&&text[i+1]==='\n') i++; continue;}
-    if(!inQuotes&&ch===','){row.push(cur);cur='';continue;} cur+=ch;
-  }
-  if(cur!==''||row.length){row.push(cur);rows.push(row.map(c=>c.trim()));}
-  return rows.filter(r=>r.some(c=>c!==''));
-}
+function parseCSV(text){const rows=[];let cur='',row=[],inQuotes=false;for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(inQuotes&&text[i+1]==='"'){cur+='"';i++;continue;} inQuotes=!inQuotes;continue;} if(!inQuotes&&(ch==='\n'||ch==='\r')){if(cur!==''||row.length){row.push(cur);rows.push(row.map(c=>c.trim()));} cur='';row=[]; if(ch==='\r'&&text[i+1]==='\n') i++;continue;} if(!inQuotes&&ch===','){row.push(cur);cur='';continue;} cur+=ch;} if(cur!==''||row.length){row.push(cur);rows.push(row.map(c=>c.trim()));} return rows.filter(r=>r.some(c=>c!==''));}
 function normalize(s){return s?String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase():'';}
-function toNumber(v){if(v===undefined||v===null)return 0;if(typeof v==='number')return isFinite(v)?v:0;let s=String(v).trim();if(!s)return 0;s=s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');if(s.indexOf('.')!==-1&&s.indexOf(',')!==-1)s=s.replace(/\./g,'.').replace(/,/g,'.');else if(s.indexOf(',')!==-1)s=s.replace(/,/g,'.');else s=s.replace(/\./g,'');const n=parseFloat(s);return isNaN(n)?0:n;}
+function toNumber(v){if(v===undefined||v===null)return 0;if(typeof v==='number')return isFinite(v)?v:0;let s=String(v).trim();if(!s)return 0;s=s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');if(s.indexOf('.')!==-1&&s.indexOf(',')!==-1)s=s.replace(/\./g,'').replace(/,/g,'.');else if(s.indexOf(',')!==-1)s=s.replace(/,/g,'.');else s=s.replace(/\./g,'');const n=parseFloat(s);return isNaN(n)?0:n;}
 function formatBR(v){return v?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0})||'R$ 0';}
-async function fetchAndParse(url){try{const res=await fetch(url+"&nocache="+Date.now(),{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);return parseCSV(await res.text());}catch(e){console.error('fetch error for',url,e);return null;}}
+async function fetchAndParse(url){try{const res=await fetch(url+"&nocache="+Date.now(),{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);return parseCSV(await res.text());}catch(e){console.error('fetch error',url,e);return null;}}
 function findExactHeader(rows){for(let i=0;i<rows.length;i++){const norm=rows[i].map(c=>normalize(c));if(norm.some(c=>c.includes('dias trabalh')||c.includes('pago total')||c.includes('pago hoje')||c.includes('projecao'))){return {headerIdx:i,norm};}}return null;}
 
 async function loadAll(){
   for(const f of fontes){
     const rows=await fetchAndParse(f.url);
-    if(!rows){ cache[f.id]=null; continue; }
+    if(!rows){cache[f.id]=null;continue;}
     const metaRow=rows.find(r=>normalize(r[0]).includes('meta')); const meta=metaRow?toNumber(metaRow[1]):0;
-    const headerInfo=findExactHeader(rows);
-    let total=0,lastPay=0,projPercent=0;
-    if(headerInfo){
-      const {headerIdx,norm}=headerInfo;
-      const dataRow=rows[headerIdx+1]||[];
-      const idxProj=norm.findIndex(c=>c.includes('projecao'));
-      const idxTotal=norm.findIndex(c=>c.includes('pago total')||c.includes('valor total'));
-      const idxHoje=norm.findIndex(c=>c.includes('pago hoje'));
-      if(idxTotal>=0) total=toNumber(dataRow[idxTotal]);
-      if(idxHoje>=0) lastPay=toNumber(dataRow[idxHoje]);
-      if(idxProj>=0) projPercent=meta?Math.round((toNumber(dataRow[idxProj])/meta)*100):0;
-    }
+    const headerInfo=findExactHeader(rows); let total=0,lastPay=0,projPercent=0;
+    if(headerInfo){const {headerIdx,norm}=headerInfo; const dataRow=rows[headerIdx+1]||[]; const idxProj=norm.findIndex(c=>c.includes('projecao')); const idxTotal=norm.findIndex(c=>c.includes('pago total')||c.includes('valor total')); const idxHoje=norm.findIndex(c=>c.includes('pago hoje')); if(idxTotal>=0) total=toNumber(dataRow[idxTotal]); if(idxHoje>=0) lastPay=toNumber(dataRow[idxHoje]); if(idxProj>=0) projPercent=meta?Math.round((toNumber(dataRow[idxProj])/meta)*100):0;}
     cache[f.id]={meta,total,projPercent,lastPay};
   }
   document.getElementById('loading-indicator').style.display='none';
@@ -168,8 +66,14 @@ async function loadAll(){
 
 function renderAll(){
   const main=document.getElementById('main-content'); main.innerHTML='';
+  const n=fontes.length;
+  const rows=Math.ceil(Math.sqrt(n));
+  const cols=Math.ceil(n/rows);
+  main.style.gridTemplateRows=`repeat(${rows},1fr)`;
+  main.style.gridTemplateColumns=`repeat(${cols},1fr)`;
   for(const f of fontes){
-    const d=cache[f.id]; const card=document.createElement('div'); card.className='card';
+    const d=cache[f.id];
+    const card=document.createElement('div'); card.className='card';
     if(!d){card.innerHTML=`<div class="title">${f.id}</div><div>Sem dados</div>`; main.appendChild(card); continue;}
     card.innerHTML=`
       <div class="title">${f.id}</div>
@@ -182,11 +86,33 @@ function renderAll(){
     `;
     main.appendChild(card);
   }
+  adjustFontSize();
+}
+
+// Ajusta tamanho da fonte para preencher a tela
+function adjustFontSize(){
+  const main=document.getElementById('main-content');
+  const cards=[...main.children];
+  let fontSize=50;
+  while(fontSize>5){
+    let fits=true;
+    cards.forEach(c=>{
+      c.style.fontSize=fontSize+'px';
+    });
+    const mainRect=main.getBoundingClientRect();
+    cards.forEach(c=>{
+      const rect=c.getBoundingClientRect();
+      if(rect.width>mainRect.width/cards.length || rect.height>mainRect.height){
+        fits=false;
+      }
+    });
+    if(fits) break;
+    fontSize-=1;
+  }
 }
 
 loadAll();
-setInterval(loadAll, REFRESH_MS);
-setInterval(()=>{ window.location.replace(window.location.pathname+'?_='+Date.now()); }, PAGE_RELOAD_MS);
+setInterval(loadAll,60000);
 </script>
 </body>
 </html>
