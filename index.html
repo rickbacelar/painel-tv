@@ -18,21 +18,22 @@ html,body{height:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;bac
 header{
   background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);
   color:white;
-  padding:15px 30px;
+  padding:20px 40px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  font-size:36px;
 }
-.header-title{display:flex;align-items:center;gap:15px;font-weight:800;font-size:32px;letter-spacing:0.5px;}
-.logo-dot{width:20px;height:20px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
-.logo-img{height:100px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
+.header-title{display:flex;align-items:center;gap:20px;font-weight:800;letter-spacing:0.5px;}
+.logo-dot{width:24px;height:24px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
+.logo-img{height:120px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
 .main{
   flex:1;
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap:20px;
-  padding:20px;
+  gap:25px;
+  padding:25px;
   justify-items:stretch;
   align-items:stretch;
   overflow-y:auto;
@@ -40,7 +41,7 @@ header{
 .card{
   background:var(--card);
   border-radius:20px;
-  padding:30px;
+  padding:40px;
   box-shadow:0 8px 20px rgba(0,0,0,0.08);
   display:flex;
   flex-direction:column;
@@ -51,21 +52,22 @@ header{
   transition:transform 0.3s ease,box-shadow 0.3s ease;
 }
 .card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,0.12);}
-.title{font-size:1.8rem;color:var(--dark);font-weight:900;margin-bottom:20px;text-transform:uppercase;letter-spacing:0.5px;}
-.info{display:flex;flex-direction:column;gap:12px;font-size:1.2rem;font-weight:600;color:var(--dark);}
+.title{font-size:3rem;color:var(--dark);font-weight:900;margin-bottom:25px;text-transform:uppercase;letter-spacing:1px;}
+.info{display:flex;flex-direction:column;gap:16px;font-size:2rem;font-weight:600;color:var(--dark);}
 .info strong{color:var(--orange);font-weight:700;}
 .footer{
-  padding:15px 30px;
+  padding:20px 40px;
   text-align:center;
   color:var(--muted);
-  font-size:18px;
+  font-size:20px;
   background:#EFEFEF;
   border-top:2px solid var(--orange);
   font-weight:600;
   letter-spacing:0.5px;
 }
-.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:22px;color:var(--dark);}
+.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:2.5rem;color:var(--dark);}
 </style>
+
 </head>
 <body>
 <div class="app">
