@@ -73,60 +73,62 @@ header{
   height:100%;
   text-align:center;
   animation:fadeIn 1.5s ease;
+  max-height:100vh;
+  overflow:hidden;
 }
 
 .destaque-card{
   background: linear-gradient(135deg, var(--orange) 0%, #ff9330 100%);
   border-radius:40px;
-  padding:80px 100px;
+  padding:40px 60px; /* reduzido */
   color:white;
   box-shadow:0 0 30px rgba(0,0,0,0.3);
   animation: brilhar 2s infinite alternate;
-}
-
-@keyframes brilhar{
-  from{box-shadow:0 0 20px rgba(255,255,255,0.4);}
-  to{box-shadow:0 0 50px rgba(255,255,255,0.9);}
-}
-
-@keyframes fadeIn{
-  from{opacity:0; transform:scale(0.95);}
-  to{opacity:1; transform:scale(1);}
+  max-height:90vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
 }
 
 .foto-destaque{
-  width:350px;
-  height:350px;
+  width:280px; /* menor */
+  height:280px;
   object-fit:cover;
   border-radius:50%;
   border:8px solid white;
-  margin:40px 0;
+  margin:25px 0;
   box-shadow:0 0 25px rgba(255,255,255,0.6);
 }
 
 .estrelas{
-  font-size:3rem;
+  font-size:2.4rem; /* menor */
   color:gold;
-  text-shadow:0 0 15px rgba(255,255,255,0.8);
-  margin-bottom:10px;
+  text-shadow:0 0 10px rgba(255,255,255,0.8);
+  margin-bottom:8px;
 }
 
 .destaque-card h1{
-  font-size:3.5rem;
-  margin-bottom:25px;
+  font-size:3rem; /* menor */
+  margin-bottom:15px;
   text-shadow:0 3px 10px rgba(0,0,0,0.3);
 }
 
 .destaque-card h2{
-  font-size:3rem;
-  margin-bottom:20px;
+  font-size:2.5rem; /* menor */
+  margin-bottom:15px;
 }
 
 .destaque-card p{
-  font-size:2rem;
-  margin-top:15px;
+  font-size:1.7rem; /* menor */
+  margin-top:10px;
   font-weight:600;
+  max-width:90%;
+  margin-left:auto;
+  margin-right:auto;
+  line-height:1.4;
 }
+
 
 /* efeito de clique (leve flash visual) */
 body:active {
