@@ -152,6 +152,7 @@ body:active {
 </div>
 
 <script>
+/* ------------- CONFIG ------------- */
 const fontes = [
   { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
   { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
@@ -165,144 +166,286 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 const DESTAQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1188185218&single=true&output=csv";
+const PAGE_DURATION = 30000; // 30s
 
-const PAGE_DURATION = 30000; 
-let cache = {}, currentPage = 0, pages = [], destaqueInfo = null;
+/* ------------- STATE ------------- */
+let cache = {};
+let pages = [];
+let currentPage = 0;
+let destaqueInfo = null;
 
-/* === PARSER CSV === */
+/* ------------- UTIL ------------- */
 function parseCSV(text) {
+  // robust CSV parser (handles quoted fields with commas/newlines)
   const rows = [];
-  let insideQuote = false, value = "", row = [];
-  for (let c of text) {
-    if (c === '"') insideQuote = !insideQuote;
-    else if (c === ',' && !insideQuote) { row.push(value.trim()); value = ""; }
-    else if ((c === '\n' || c === '\r') && !insideQuote) {
-      if (value || row.length) { row.push(value.trim()); rows.push(row); row = []; value = ""; }
-    } else value += c;
+  let cur = "", row = [], inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i+1] === '"') { cur += '"'; i++; continue; }
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && ch === ',') { row.push(cur); cur = ""; continue; }
+    if (!inQuotes && (ch === '\n' || ch === '\r')) {
+      if (cur !== "" || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
+      cur = ""; row = [];
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      continue;
+    }
+    cur += ch;
   }
-  if (value || row.length) row.push(value.trim()), rows.push(row);
-  return rows.filter(r => r.length > 0);
+  if (cur !== "" || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
+  return rows.filter(r => r.some(c => c !== ""));
 }
-
-/* === Funções auxiliares === */
-function normalize(s){return s?String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase():"";}
-function toNumber(v){if(!v)return 0;let s=String(v).replace(/\s|R\$|r\$|%/g,"");s=s.replace(/\./g,"").replace(/,/g,".");const n=parseFloat(s);return isNaN(n)?0:n;}
-function formatBR(v){return(toNumber(v)).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
-function findExactHeader(rows){for(let i=0;i<rows.length;i++){const n=rows[i].map(c=>normalize(c));if(n.some(c=>c.includes("dias trabalh")||c.includes("pago total")||c.includes("pago hoje")||c.includes("projecao")||c.includes("projeção")))return{headerIdx:i,norm:n}}return null;}
+function normalize(s){ return s? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase() : ''; }
+function toNumber(v){
+  if(v===undefined || v===null) return 0;
+  if(typeof v === 'number') return isFinite(v)?v:0;
+  let s = String(v).trim();
+  if(!s) return 0;
+  s = s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
+  // handle thousands and decimals
+  if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){ s = s.replace(/\./g,'').replace(/,/g,'.'); }
+  else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){ s = s.replace(/,/g,'.'); }
+  else { s = s.replace(/\./g,''); }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function formatBR(v){ return (typeof v === 'number' ? v : toNumber(v)).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2}); }
 async function fetchAndParse(url){
-  try {
-    const r=await fetch(url+(url.includes("?")?"&":"?")+"nocache="+Date.now(),{cache:"no-store"});
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const t=await r.text();
-    return parseCSV(t);
-  } catch(e) {
-    console.error("Erro ao buscar",url,e);
+  try{
+    const res = await fetch(url + (url.includes('?') ? '&' : '?') + "nocache=" + Date.now(), { cache: 'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    return parseCSV(text);
+  }catch(e){
+    console.error('fetch error for', url, e);
     return null;
   }
 }
 
-/* === Leitura e exibição === */
+/* ------------- heurísticas para identificar header/data ------------- */
+function findHeaderRow(rows){
+  // procura linhas que tenham keywords (aceita variações)
+  const keywords = ['projec','projeção','pago total','pagohoje','pago hoje','valor total','dias trabalh','pago hoje','projecao'];
+  for(let i=0;i<rows.length;i++){
+    const norm = rows[i].map(c=>normalize(c)).join(' ');
+    for(const k of keywords) if(norm.includes(k)) return i;
+  }
+  // fallback: a primeira linha que contenha "pago" ou "projec" em algum campo
+  for(let i=0;i<rows.length;i++){
+    if(rows[i].some(c => normalize(c).includes('pago') || normalize(c).includes('projec'))) return i;
+  }
+  return null;
+}
+function buildHeaderMap(headerRow){
+  const map = {};
+  for(let i=0;i<headerRow.length;i++){
+    const h = normalize(headerRow[i]||'');
+    map[h] = i;
+  }
+  return map;
+}
+function findBestDataRow(rows, headerIdx){
+  // prefer next row; se vazia, achar a primeira linha que contenha número BR (R$) ou dígitos
+  const maybe = rows[headerIdx+1];
+  if(maybe && maybe.some(c=>/[0-9]/.test(c))) return maybe;
+  for(let i=headerIdx+1;i<rows.length;i++){
+    if(rows[i].some(c=>/[0-9]/.test(c))) return rows[i];
+  }
+  return maybe || rows[headerIdx+1] || [];
+}
+
+/* ------------- Load everything ------------- */
 async function loadAll(){
+  console.log('Iniciando loadAll...');
   for(const f of fontes){
-    const rows=await fetchAndParse(f.url);
-    if(!rows){cache[f.id]=null;continue;}
-    const metaRow=rows.find(r=>normalize(r[0]).includes("meta"));const meta=metaRow?toNumber(metaRow[1]):0;
-    const h=findExactHeader(rows);let total=0,last=0,proj=0;
-    if(h){
-      const d=rows[h.headerIdx+1]||[],n=h.norm;
-      const ip=n.findIndex(c=>c.includes("projecao")||c.includes("projeção"));
-      const it=n.findIndex(c=>c.includes("pago total")||c.includes("valor total"));
-      const ih=n.findIndex(c=>c.includes("pago hoje"));
-      if(it>=0) total=toNumber(d[it]);
-      if(ih>=0) last=toNumber(d[ih]);
-      if(ip>=0){const v=d[ip];proj=String(v).includes("%")?Math.round(toNumber(v)):meta?Math.round(toNumber(v)/meta*100):Math.round(toNumber(v));}
+    console.log('Carregando fonte:', f.id, f.url);
+    const rows = await fetchAndParse(f.url);
+    console.log(`Preview ${f.id}:`, rows && rows.slice(0,6));
+    if(!rows){ cache[f.id] = null; continue; }
+
+    // tentativa 1: achar header que contenha os nomes esperados
+    let headerIdx = findHeaderRow(rows);
+    if (headerIdx === null) {
+      // se não encontrou header, assumir primeira linha como header
+      headerIdx = 0;
     }
-    cache[f.id]={meta,total,projPercent:proj,lastPay:last};
+
+    const headerRow = rows[headerIdx];
+    const headerMap = buildHeaderMap(headerRow);
+    const dataRow = findBestDataRow(rows, headerIdx) || [];
+
+    // extract by known names (com múltiplas variações)
+    const getByNames = (names) => {
+      for(const name of names){
+        const key = Object.keys(headerMap).find(k => k.includes(normalize(name)));
+        if(key) return dataRow[headerMap[key]];
+      }
+      // fallback: try find any column containing R$ in header or data
+      for(let j=0;j<headerRow.length;j++){
+        if(String(headerRow[j]).toLowerCase().includes('meta') && dataRow[j]) return dataRow[j];
+      }
+      return undefined;
+    };
+
+    const metaCandidates = ['meta mensal','meta mês','meta','meta mensal (r$)'];
+    const pagoTotalCandidates = ['pago total','valor total','total','valor total captado','pago_total'];
+    const pagoHojeCandidates = ['pago hoje','pagos hoje','pagohoje','pago_hj','pago hoje (r$)'];
+    const projCandidates = ['projec','projeção','projecao','projecao mes','projecao mês'];
+
+    let meta = getByNames(metaCandidates);
+    let total = getByNames(pagoTotalCandidates);
+    let lastPay = getByNames(pagoHojeCandidates);
+    let proj = getByNames(projCandidates);
+
+    // se ainda undefined, tentar pegar por posição relativa (heurística)
+    if((meta===undefined || meta===null || meta==='') && rows.length>0){
+      // procurar na planilha por qualquer célula com "meta" em qualquer linha
+      for(const r of rows){
+        for(let i=0;i<r.length;i++){
+          if(normalize(r[i]||'').includes('meta')) { meta = r[i+1] || meta; break; }
+        }
+        if(meta) break;
+      }
+    }
+
+    if((total===undefined || total===null || total==='') || (lastPay===undefined || lastPay===null || lastPay==='')){
+      // tentar detectar linha de dados pela presença de R$ ou números grande (fallback)
+      const dataLine = rows.find(r => r.some(c => /R\$|[0-9]{2,}\.[0-9]{3}|[0-9]{3,}/.test(String(c))));
+      if(dataLine){
+        // heurística: buscar columns with numbers and assume order if header not found
+        const numbers = dataLine.map(c=> toNumber(c));
+        // try to assign: pick largest as total, pick a smaller as lastPay
+        const sorted = numbers.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+        if(sorted.length>0 && (!total || toNumber(total)===0)) total = dataLine[sorted[0].i];
+        if(sorted.length>1 && (!lastPay || toNumber(lastPay)===0)) lastPay = dataLine[sorted[1].i];
+      }
+    }
+
+    // convert values safely
+    const metaN = toNumber(meta);
+    const totalN = toNumber(total);
+    const lastPayN = toNumber(lastPay);
+    let projPercent = 0;
+    if(proj && String(proj).includes('%')) projPercent = Math.round(toNumber(proj));
+    else if(proj && toNumber(proj)>0 && metaN>0) projPercent = Math.round( (toNumber(proj) / metaN) * 100 );
+    else if(metaN>0) projPercent = Math.round( (totalN / metaN) * 100 );
+
+    cache[f.id] = {
+      meta: metaN,
+      total: totalN,
+      projPercent,
+      lastPay: lastPayN
+    };
+
+    console.log(`Fonte ${f.id} -> meta:${metaN}, total:${totalN}, proj:${projPercent}, last:${lastPayN}`);
+    if(metaN===0 || totalN===0) console.warn(`Valores possivelmente incorretos para ${f.id} — verifique cabeçalhos na planilha ou veja preview no console.`);
   }
 
-  // === Destaque da Semana ===
-  const dr=await fetchAndParse(DESTAQUE_URL);
-  if(dr && dr.length>1){
-    const headers = dr[0].map(x => x.trim());
-    const data = dr[1].map(x => x.trim());
-    destaqueInfo = Object.fromEntries(headers.map((h,i)=>[h, data[i] || ""]));
+  // DESTAQUE
+  console.log('Carregando destaque:', DESTAQUE_URL);
+  const destaqueRows = await fetchAndParse(DESTAQUE_URL);
+  console.log('Preview destaque:', destaqueRows && destaqueRows.slice(0,6));
+  if(destaqueRows && destaqueRows.length>1){
+    const headers = destaqueRows[0].map(h=>h.trim());
+    const data = destaqueRows[1].map(h=>h.trim());
+    const obj = {};
+    for(let i=0;i<headers.length;i++) obj[headers[i]] = data[i] || "";
+    // normalize known keys
+    const keysLower = Object.fromEntries(Object.keys(obj).map(k => [normalize(k), obj[k]]));
+    destaqueInfo = {
+      Nome: obj['Nome'] || obj['nome'] || keysLower['nome'] || keysLower['name'] || "",
+      FotoURL: obj['Foto URL'] || obj['Foto'] || obj['foto url'] || obj['foto'] || keysLower['foto url'] || keysLower['foto'] || "",
+      Mensagem: obj['Mensagem'] || obj['mensagem'] || keysLower['mensagem'] || ""
+    };
+    console.log('Destaque lido:', destaqueInfo);
+  } else {
+    destaqueInfo = null;
   }
 
-  document.getElementById("loading-indicator").style.display="none";
+  document.getElementById('loading-indicator').style.display = 'none';
   preparePages();
   showPage(0);
   setInterval(nextPage, PAGE_DURATION);
 }
 
-/* === Cartões === */
+/* ------------- RENDER ------------- */
 function createCard(f){
-  const d=cache[f.id];
-  const c=document.createElement("div");c.className="card";
+  const d = cache[f.id];
+  const card = document.createElement('div');
+  card.className = 'card';
   if(!d){
-    c.innerHTML=`<div class="title">${f.id}</div><div>Sem dados</div>`;
-  }else{
-    c.innerHTML=`<div class="title">${f.id}</div><div class="info">
-    <div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
-    <div><strong>Valor Total Captado:</strong> ${formatBR(d.total)}</div>
-    <div><strong>Projeção:</strong> ${d.projPercent}%</div>
-    <div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div></div>`;
+    card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`;
+  } else {
+    card.innerHTML = `
+      <div class="title">${f.id}</div>
+      <div class="info">
+        <div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
+        <div><strong>Valor Total Captado:</strong> ${formatBR(d.total)}</div>
+        <div><strong>Projeção:</strong> ${d.projPercent}%</div>
+        <div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div>
+      </div>
+    `;
   }
-  return c;
+  return card;
 }
 
 function createDestaqueCard(){
-  const n=(destaqueInfo && (destaqueInfo["Nome"] || destaqueInfo["nome"])) || "Colaborador(a) em destaque";
-  let f=(destaqueInfo && (destaqueInfo["Foto URL"] || destaqueInfo["foto"] || destaqueInfo["Foto"])) || "";
-  const m=(destaqueInfo && (destaqueInfo["Mensagem"] || destaqueInfo["mensagem"])) || "Parabéns pelo excelente desempenho na semana!";
+  const nome = (destaqueInfo && (destaqueInfo.Nome)) || "Colaborador(a) em destaque";
+  let foto = (destaqueInfo && (destaqueInfo.FotoURL)) || "";
+  const msg = (destaqueInfo && (destaqueInfo.Mensagem)) || "Parabéns pelo excelente desempenho na semana!";
 
-  // Corrige link do Drive automaticamente
-  if(f.includes("drive.google.com")){
-    const match=f.match(/[-\w]{25,}/);
-    if(match) f=`https://drive.google.com/uc?id=${match[0]}`;
+  // normalizar link do Google Drive para uc?id=
+  if(foto && foto.includes('drive.google.com')){
+    const idMatch = foto.match(/[-\w]{25,}/);
+    if(idMatch) foto = `https://drive.google.com/uc?id=${idMatch[0]}`;
   }
 
-  const c=document.createElement("div");c.className="destaque-semana";
-  c.innerHTML=`
-  <div class="destaque-card">
-    <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
-    <img id="foto-destaque" src="${f}?t=${Date.now()}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
-    <h2>${n}</h2>
-    <div class="estrelas">★★★★★</div>
-    <p>${m}</p>
-  </div>`;
-  return c;
+  // append anti-cache timestamp
+  if(foto && !foto.includes('?')) foto = foto + '?t=' + Date.now();
+  else if(foto) foto = foto + '&t=' + Date.now();
+
+  const div = document.createElement('div');
+  div.className = 'destaque-semana';
+  div.innerHTML = `
+    <div class="destaque-card">
+      <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
+      <img id="foto-destaque" src="${foto}" alt="Destaque" class="foto-destaque" referrerpolicy="no-referrer" onerror="this.src='destaque.jpg'">
+      <h2>${nome}</h2>
+      <div class="estrelas">★★★★★</div>
+      <p>${msg}</p>
+    </div>
+  `;
+  return div;
 }
 
-/* === Páginas === */
 function preparePages(){
-  pages=[
-    ["CREF19","CREF20","CREF21"].map(i=>createCard(fontes.find(f=>f.id===i))),
-    ["CRTR02","CRTR08","CRTR15","CRN11"].map(i=>createCard(fontes.find(f=>f.id===i))),
-    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(i=>createCard(fontes.find(f=>f.id===i))),
+  pages = [
+    ["CREF19","CREF20","CREF21"].map(id => createCard(fontes.find(f=>f.id===id))),
+    ["CRTR02","CRTR08","CRTR15","CRN11"].map(id => createCard(fontes.find(f=>f.id===id))),
+    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id))),
     [createDestaqueCard()]
   ];
 }
 
-function showPage(i){
-  currentPage=i;
-  const m=document.getElementById("main-content");
-  m.innerHTML="";
-  const c=pages[i];
-  if(!c)return;
-  m.style.gridTemplateColumns=`repeat(${c.length},1fr)`;
-  c.forEach(e=>m.appendChild(e));
+function showPage(idx){
+  currentPage = idx;
+  const main = document.getElementById('main-content');
+  main.innerHTML = '';
+  const cards = pages[idx];
+  if(!cards) return;
+  main.style.gridTemplateColumns = `repeat(${cards.length}, 1fr)`;
+  cards.forEach(c=> main.appendChild(c));
 }
+function nextPage(){ showPage((currentPage+1) % pages.length); }
 
-function nextPage(){
-  showPage((currentPage+1)%pages.length);
-}
+/* ------------- auto reload and click advance ------------- */
+setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 120000); // 2 min refresh
+document.addEventListener('click', ()=> nextPage());
 
-/* Atualização automática a cada 2 minutos */
-setInterval(()=>{window.location.replace(window.location.pathname+"?_="+Date.now())},120000);
-
-/* Clique manual para avançar */
-document.addEventListener("click",()=>nextPage());
-
+/* ------------- start ------------- */
 loadAll();
 </script>
 </body>
