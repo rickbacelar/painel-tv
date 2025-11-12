@@ -18,23 +18,30 @@ html,body{height:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;bac
 header{
   background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);
   color:white;
-  padding:10px 20px;
+  padding:15px 30px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
-.header-title{display:flex;align-items:center;gap:10px;font-weight:800;font-size:28px;letter-spacing:0.5px;}
-.logo-dot{width:16px;height:16px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
-.logo-img{height:80px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
-.main{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px;padding:20px;overflow-y:auto;}
+.header-title{display:flex;align-items:center;gap:15px;font-weight:800;font-size:32px;letter-spacing:0.5px;}
+.logo-dot{width:20px;height:20px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
+.logo-img{height:100px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
+.main{
+  flex:1;
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap:20px;
+  padding:20px;
+  justify-items:stretch;
+  align-items:stretch;
+  overflow-y:auto;
+}
 .card{
   background:var(--card);
-  border-radius:16px;
-  padding:20px;
+  border-radius:20px;
+  padding:30px;
   box-shadow:0 8px 20px rgba(0,0,0,0.08);
-  flex:1 1 220px;
-  max-width:280px;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -44,20 +51,20 @@ header{
   transition:transform 0.3s ease,box-shadow 0.3s ease;
 }
 .card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,0.12);}
-.title{font-size:40px;color:var(--dark);font-weight:900;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;}
-.info{display:flex;flex-direction:column;gap:8px;font-size:32px;font-weight:600;color:var(--dark);}
+.title{font-size:1.8rem;color:var(--dark);font-weight:900;margin-bottom:20px;text-transform:uppercase;letter-spacing:0.5px;}
+.info{display:flex;flex-direction:column;gap:12px;font-size:1.2rem;font-weight:600;color:var(--dark);}
 .info strong{color:var(--orange);font-weight:700;}
 .footer{
-  padding:10px 20px;
+  padding:15px 30px;
   text-align:center;
   color:var(--muted);
-  font-size:32px;
+  font-size:18px;
   background:#EFEFEF;
   border-top:2px solid var(--orange);
   font-weight:600;
   letter-spacing:0.5px;
 }
-.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:36px;color:var(--dark);}
+.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:22px;color:var(--dark);}
 </style>
 </head>
 <body>
@@ -92,8 +99,8 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 60000;   // fetch a cada 60s
-const PAGE_RELOAD_MS = 60000; // recarrega a página a cada 60s
+const REFRESH_MS = 60000;   
+const PAGE_RELOAD_MS = 60000; 
 
 let cache = {};
 
