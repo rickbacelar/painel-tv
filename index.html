@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Painel de Resultados - Todos Conselhos</title>
+<title>Painel de Resultados - MC Soluções</title>
 <style>
 :root{
   --orange:#FF6B00;
-  --dark:#2E2E2E;
-  --bg:#F5F5F6;
+  --dark:#1E1E1E;
+  --bg:#F4F4F6;
   --card:#ffffff;
   --muted:#777;
 }
@@ -20,52 +20,109 @@ html,body{
   background:var(--bg);
   color:var(--dark);
 }
+
+/* Estrutura principal */
 .app{display:flex;flex-direction:column;height:100%;}
+
+/* HEADER */
 header{
   background:linear-gradient(90deg,var(--dark),#444);
   color:white;
-  padding:12px 20px;
+  padding:18px 28px;
   display:flex;
   align-items:center;
   justify-content:space-between;
 }
 .header-title{
-  display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  font-weight:700;
+  font-size:32px; /* título maior */
 }
 .logo-dot{
-  width:14px;height:14px;border-radius:4px;background:var(--orange);box-shadow:0 2px 6px rgba(255,107,0,0.28);
+  width:20px;height:20px;border-radius:4px;background:var(--orange);
+  box-shadow:0 2px 6px rgba(255,107,0,0.4);
 }
 .logo-img{
-  height:50px;width:auto;object-fit:contain;margin-right:6px;background:white;border-radius:6px;padding:3px;
+  height:80px;
+  width:auto;
+  object-fit:contain;
+  background:white;
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 0 10px rgba(0,0,0,0.25);
 }
+
+/* CARDS */
 .main{
-  flex:1;display:flex;flex-wrap:wrap;gap:18px;padding:18px;align-items:stretch;justify-content:center;
+  flex:1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:28px;
+  padding:28px;
+  justify-content:center;
+  align-items:stretch;
 }
+
 .card{
   background:var(--card);
-  border-radius:12px;
-  padding:18px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.06);
-  flex:1 1 300px;
-  max-width:420px;
+  border-radius:20px;
+  padding:28px;
+  box-shadow:0 10px 24px rgba(0,0,0,0.1);
+  flex:1 1 400px;
+  max-width:500px;
   display:flex;
   flex-direction:column;
   justify-content:center;
   align-items:center;
   text-align:center;
+  transition:transform 0.3s;
 }
-.title{font-size:20px;color:var(--dark);margin-bottom:12px;font-weight:700;}
-.info{display:flex;flex-direction:column;gap:8px;font-size:18px;font-weight:500;}
-.info strong{font-size:19px;color:#333;}
-.footer{padding:10px 18px;text-align:right;color:var(--muted);font-size:13px;}
-.center{display:flex;align-items:center;justify-content:center;height:100%;}
+.card:hover{transform:scale(1.02);}
+
+.title{
+  font-size:32px;
+  color:var(--dark);
+  margin-bottom:20px;
+  font-weight:800;
+}
+
+/* Informações principais */
+.info{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  font-size:26px;
+  font-weight:600;
+  line-height:1.5;
+}
+.info strong{
+  font-size:28px;
+  color:#222;
+}
+
+/* FOOTER */
+.footer{
+  padding:16px 24px;
+  text-align:right;
+  color:var(--muted);
+  font-size:20px;
+}
+.center{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  font-size:26px;
+}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="header-title">
-      <img src="logo.png" alt="Logo Onze Soluções" class="logo-img">
+      <img src="logo.png" alt="Logo MC Soluções" class="logo-img">
       <div class="logo-dot"></div>
       <div>Painel de Resultados</div>
     </div>
@@ -75,7 +132,7 @@ header{
     <div class="center" id="loading-indicator">Carregando dados...</div>
   </div>
 
-  <div class="footer">MC Soluções</div>
+  <div class="footer">MC Soluções ©</div>
 </div>
 
 <script>
@@ -93,53 +150,36 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 10000;
 let cache = {};
+const REFRESH_MS = 10000; // Atualiza dados a cada 10s
 
-function parseCSV(text){
-  return text.split(/\r?\n/).map(l=>l.split(",").map(c=>c.replace(/"/g,"").trim())).filter(r=>r.length>1);
-}
-function toNumber(v){
-  if(!v) return 0;
-  const cleaned = v.replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(/,/g,".");
-  return parseFloat(cleaned)||0;
-}
+// === FUNÇÕES AUXILIARES ===
+function parseCSV(text){return text.split(/\r?\n/).map(l=>l.split(",").map(c=>c.replace(/"/g,"").trim())).filter(r=>r.length>1);}
+function toNumber(v){if(!v)return 0;const cleaned=v.replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(/,/g,".");return parseFloat(cleaned)||0;}
 function formatBR(v){return v?.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0})||"R$ 0";}
-async function fetchAndParse(url){
-  try{
-    const fullUrl = url + "&nocache=" + Date.now();
-    const res = await fetch(fullUrl, { cache: "no-store" });
-    if(!res.ok) throw new Error("Erro HTTP " + res.status);
-    return parseCSV(await res.text());
-  }catch(e){
-    console.error("Erro:", e);
-    return null;
-  }
-}
+async function fetchAndParse(url){try{const res=await fetch(url+"&nocache="+Date.now(),{cache:"no-store"});if(!res.ok)throw new Error(res.status);return parseCSV(await res.text());}catch(e){console.error("Erro:",e);return null;}}
 
+// === CARREGAMENTO ===
 async function loadAll(){
   for(const f of fontes){
-    const rows = await fetchAndParse(f.url);
-    if(!rows){ cache[f.id]=null; continue; }
+    const rows=await fetchAndParse(f.url);
+    if(!rows){cache[f.id]=null;continue;}
 
-    // Busca valor da Meta Mensal
-    const metaRow = rows.find(r=>r[0]?.toLowerCase().includes("meta"));
-    const meta = metaRow ? toNumber(metaRow[1]) : 0;
+    const metaRow=rows.find(r=>r[0]?.toLowerCase().includes("meta"));
+    const meta=metaRow?toNumber(metaRow[1]):0;
 
-    // Procura cabeçalho com "Pago Total" e "Pago Hoje"
-    const headerRow = rows.find(r=>r.some(c=>c.toLowerCase().includes("pago total")));
-    const headerIdx = rows.indexOf(headerRow);
-    const dataRow = rows[headerIdx+1] || [];
+    const headerRow=rows.find(r=>r.some(c=>c.toLowerCase().includes("pago total")));
+    const headerIdx=rows.indexOf(headerRow);
+    const dataRow=rows[headerIdx+1]||[];
 
-    const colPagoTotal = headerRow?.findIndex(c=>c.toLowerCase().includes("pago total")) ?? -1;
-    const colPagoHoje = headerRow?.findIndex(c=>c.toLowerCase().includes("pago hoje")) ?? -1;
-    const colProj = headerRow?.findIndex(c=>c.toLowerCase().includes("proj")) ?? -1;
+    const colPagoTotal=headerRow?.findIndex(c=>c.toLowerCase().includes("pago total"))??-1;
+    const colPagoHoje=headerRow?.findIndex(c=>c.toLowerCase().includes("pago hoje"))??-1;
+    const colProj=headerRow?.findIndex(c=>c.toLowerCase().includes("proj"))??-1;
 
-    const total = colPagoTotal>=0 ? toNumber(dataRow[colPagoTotal]) : 0;
-    const lastPay = colPagoHoje>=0 ? toNumber(dataRow[colPagoHoje]) : 0;
-    const projRaw = colProj>=0 ? toNumber(dataRow[colProj]) : 0;
-
-    const projPercent = meta ? Math.round((total/meta)*100) : (projRaw ? Math.round(projRaw/meta*100):0);
+    const total=colPagoTotal>=0?toNumber(dataRow[colPagoTotal]):0;
+    const lastPay=colPagoHoje>=0?toNumber(dataRow[colPagoHoje]):0;
+    const projRaw=colProj>=0?toNumber(dataRow[colProj]):0;
+    const projPercent=meta?Math.round((total/meta)*100):(projRaw?Math.round(projRaw/meta*100):0);
 
     cache[f.id]={meta,total,projPercent,lastPay};
   }
@@ -174,6 +214,15 @@ function renderAll(){
 
 loadAll();
 setInterval(loadAll, REFRESH_MS);
+
+// === RECARREGAR PÁGINA A CADA 15 SEGUNDOS ===
+const PAGE_RELOAD_MS = 15000;
+setInterval(()=>{
+  const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
+  const separator = urlBase.includes('?') ? '&' : '?';
+  const newUrl = urlBase + separator + '_=' + Date.now();
+  window.location.replace(newUrl);
+}, PAGE_RELOAD_MS);
 </script>
 </body>
 </html>
