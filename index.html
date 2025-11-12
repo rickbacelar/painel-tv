@@ -96,7 +96,7 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const PAGE_DURATION = 20000;
+const PAGE_DURATION = 30000; // 30 segundos por página
 let cache = {};
 let currentPage = 0;
 let pages = [];
@@ -226,7 +226,7 @@ function nextPage(){
 }
 
 loadAll();
-setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 60000);
+setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 120000); // 2 minutos
 </script>
 </body>
 </html>
