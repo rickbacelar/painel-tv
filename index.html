@@ -72,49 +72,36 @@ header{
 .card{
   background:var(--card);
   border-radius:12px;
-  padding:14px;
+  padding:18px;
   box-shadow:0 6px 18px rgba(0,0,0,0.06);
   flex:1 1 300px;
-  max-width:480px;
+  max-width:420px;
   display:flex;
   flex-direction:column;
-  min-height:0;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
 }
 
 /* título do conselho */
 .title{
-  text-align:center;
-  font-size:50px;
+  font-size:20px;
   color:var(--dark);
-  margin-bottom:10px;
+  margin-bottom:12px;
   font-weight:700;
 }
 
-/* área da tabela */
-.table-wrap{
-  flex:1;
-  overflow:auto;
-  margin-top:6px;
+/* informações principais */
+.info{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-size:18px;
+  font-weight:500;
 }
-.table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:4px;
-  text-align:center;
-}
-.table th{
-  text-align:center;
-  padding:8px;
-  font-size:35px;
-  color:var(--muted);
-  border-bottom:1px solid #eee;
-  font-weight:600;
-}
-.table td{
-  text-align:center;
-  padding:6px;
-  border-bottom:1px dashed #f0f0f0;
-  font-size:35px;
+.info strong{
+  font-size:19px;
+  color:#333;
 }
 
 /* rodapé */
@@ -158,13 +145,16 @@ const fontes = [
   { id: "CRTR02", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1484490409&single=true&output=csv" },
   { id: "CRTR08", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1600799136&single=true&output=csv" },
   { id: "CRTR15", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1264950541&single=true&output=csv" },
-  { id: "CRN11", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1667393760&single=true&output=csv" }
+  { id: "CRN11", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1667393760&single=true&output=csv" },
+  { id: "AMMV - PIX", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1154375239&single=true&output=csv" },
+  { id: "AMMV - ENEL", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=393476796&single=true&output=csv" },
+  { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 10000; // atualiza dados a cada 10 segundos
+const REFRESH_MS = 5000;
 let cache = {};
 
-// --- PARSER CSV ---
+// FUNÇÕES AUXILIARES
 function parseCSV(text) {
   const rows=[];
   const lines=text.split(/\r?\n/).filter(l=>l.trim()!=="");
@@ -206,7 +196,7 @@ function formatBR(value){
   return value?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0})||"R$ 0";
 }
 
-// --- CARREGAMENTO DOS DADOS ---
+// CARREGAMENTO DOS DADOS
 async function loadAll(){
   for(const f of fontes){
     const rows = await fetchAndParse(f.url);
@@ -235,14 +225,14 @@ async function loadAll(){
 
     const projPercent = meta ? Math.round((total/meta)*100) : 0;
 
-    cache[f.id]={headers, parsed, meta, projPercent, lastPay, total};
+    cache[f.id]={meta,total,projPercent,lastPay};
   }
 
   document.getElementById("loading-indicator").style.display="none";
   renderAll();
 }
 
-// --- RENDERIZAÇÃO ---
+// RENDERIZAÇÃO
 function renderAll(){
   const main=document.getElementById("main-content");
   main.innerHTML="";
@@ -258,43 +248,27 @@ function renderAll(){
       return;
     }
 
-    const {parsed, meta, projPercent, lastPay, total} = data;
+    const {meta,total,projPercent,lastPay} = data;
 
     card.innerHTML=`
       <div class="title">${f.id}</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;justify-content:center;text-align:center;">
+      <div class="info">
         <div><strong>Meta Mês:</strong> ${formatBR(meta)}</div>
-        <div><strong>Pago Total:</strong> ${formatBR(total)}</div>
+        <div><strong>Valor Total Captado:</strong> ${formatBR(total)}</div>
         <div><strong>Projeção:</strong> ${projPercent}%</div>
         <div><strong>Pagos Hoje:</strong> ${formatBR(lastPay)}</div>
-      </div>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr>
-            <th>Data</th>
-            <th>Valor Feito</th>
-          </tr></thead>
-          <tbody>
-            ${parsed.map(r=>`
-              <tr>
-                <td>${r["Data"]}</td>
-                <td>${formatBR(toNumber(r["Valor Feito"]))}</td>
-              </tr>`).join("")}
-          </tbody>
-        </table>
       </div>
     `;
     main.appendChild(card);
   });
 }
 
-// --- INICIALIZAÇÃO ---
+// inicialização
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
-// --- Recarrega página inteira a cada 10 minutos ---
-const RELOAD_MS = 30000;
+// Recarregar página a cada 10 min
+const RELOAD_MS = 600000;
 setInterval(() => {
   const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
   const separator = urlBase.includes('?') ? '&' : '?';
