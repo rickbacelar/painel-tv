@@ -126,12 +126,6 @@ header{
   margin-top:15px;
   font-weight:600;
 }
-
-/* efeito de clique (leve flash visual) */
-body:active {
-  opacity: 0.85;
-  transition: opacity 0.15s;
-}
 </style>
 </head>
 <body>
@@ -152,7 +146,6 @@ body:active {
 </div>
 
 <script>
-/* ------------- CONFIG ------------- */
 const fontes = [
   { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
   { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
@@ -165,38 +158,33 @@ const fontes = [
   { id: "AMMV - ENEL", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=393476796&single=true&output=csv" },
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
-const DESTAQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1188185218&single=true&output=csv";
-const PAGE_DURATION = 30000; // 30s
 
-/* ------------- STATE ------------- */
+const PAGE_DURATION = 30000; // 30 segundos por página
 let cache = {};
-let pages = [];
 let currentPage = 0;
-let destaqueInfo = null;
+let pages = [];
 
-/* ------------- UTIL ------------- */
-function parseCSV(text) {
-  // robust CSV parser (handles quoted fields with commas/newlines)
+function parseCSV(text){
   const rows = [];
-  let cur = "", row = [], inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
+  let cur = '', row = [], inQuotes = false;
+  for (let i=0; i<text.length; i++){
     const ch = text[i];
-    if (ch === '"') {
-      if (inQuotes && text[i+1] === '"') { cur += '"'; i++; continue; }
+    if (ch === '"'){
+      if (inQuotes && text[i+1] === '"'){ cur += '"'; i++; continue; }
       inQuotes = !inQuotes;
       continue;
     }
-    if (!inQuotes && ch === ',') { row.push(cur); cur = ""; continue; }
-    if (!inQuotes && (ch === '\n' || ch === '\r')) {
-      if (cur !== "" || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
-      cur = ""; row = [];
+    if (!inQuotes && (ch === '\n' || ch === '\r')){
+      if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
+      cur = ''; row = [];
       if (ch === '\r' && text[i+1] === '\n') i++;
       continue;
     }
+    if (!inQuotes && ch === ','){ row.push(cur); cur = ''; continue; }
     cur += ch;
   }
-  if (cur !== "" || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
-  return rows.filter(r => r.some(c => c !== ""));
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
+  return rows.filter(r => r.some(c => c !== ''));
 }
 function normalize(s){ return s? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase() : ''; }
 function toNumber(v){
@@ -205,164 +193,51 @@ function toNumber(v){
   let s = String(v).trim();
   if(!s) return 0;
   s = s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
-  // handle thousands and decimals
   if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){ s = s.replace(/\./g,'').replace(/,/g,'.'); }
   else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){ s = s.replace(/,/g,'.'); }
   else { s = s.replace(/\./g,''); }
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
-function formatBR(v){ return (typeof v === 'number' ? v : toNumber(v)).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2}); }
+function formatBR(v){ return v?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}) || 'R$ 0'; }
 async function fetchAndParse(url){
-  try{
-    const res = await fetch(url + (url.includes('?') ? '&' : '?') + "nocache=" + Date.now(), { cache: 'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    return parseCSV(text);
-  }catch(e){
-    console.error('fetch error for', url, e);
-    return null;
-  }
+  try{ const res = await fetch(url + "&nocache=" + Date.now(), { cache: 'no-store' });
+       if(!res.ok) throw new Error('HTTP ' + res.status);
+       return parseCSV(await res.text());
+  }catch(e){ console.error('fetch error for', url, e); return null; }
 }
-
-/* ------------- heurísticas para identificar header/data ------------- */
-function findHeaderRow(rows){
-  // procura linhas que tenham keywords (aceita variações)
-  const keywords = ['projec','projeção','pago total','pagohoje','pago hoje','valor total','dias trabalh','pago hoje','projecao'];
+function findExactHeader(rows){
   for(let i=0;i<rows.length;i++){
-    const norm = rows[i].map(c=>normalize(c)).join(' ');
-    for(const k of keywords) if(norm.includes(k)) return i;
-  }
-  // fallback: a primeira linha que contenha "pago" ou "projec" em algum campo
-  for(let i=0;i<rows.length;i++){
-    if(rows[i].some(c => normalize(c).includes('pago') || normalize(c).includes('projec'))) return i;
+    const norm = rows[i].map(c => normalize(c));
+    if(norm.some(c => c.includes('dias trabalh') || c.includes('pago total') || c.includes('pago hoje') || c.includes('projecao'))){
+      return { headerIdx: i, norm };
+    }
   }
   return null;
 }
-function buildHeaderMap(headerRow){
-  const map = {};
-  for(let i=0;i<headerRow.length;i++){
-    const h = normalize(headerRow[i]||'');
-    map[h] = i;
-  }
-  return map;
-}
-function findBestDataRow(rows, headerIdx){
-  // prefer next row; se vazia, achar a primeira linha que contenha número BR (R$) ou dígitos
-  const maybe = rows[headerIdx+1];
-  if(maybe && maybe.some(c=>/[0-9]/.test(c))) return maybe;
-  for(let i=headerIdx+1;i<rows.length;i++){
-    if(rows[i].some(c=>/[0-9]/.test(c))) return rows[i];
-  }
-  return maybe || rows[headerIdx+1] || [];
-}
 
-/* ------------- Load everything ------------- */
 async function loadAll(){
-  console.log('Iniciando loadAll...');
   for(const f of fontes){
-    console.log('Carregando fonte:', f.id, f.url);
     const rows = await fetchAndParse(f.url);
-    console.log(`Preview ${f.id}:`, rows && rows.slice(0,6));
     if(!rows){ cache[f.id] = null; continue; }
 
-    // tentativa 1: achar header que contenha os nomes esperados
-    let headerIdx = findHeaderRow(rows);
-    if (headerIdx === null) {
-      // se não encontrou header, assumir primeira linha como header
-      headerIdx = 0;
+    const metaRow = rows.find(r => normalize(r[0]).includes('meta'));
+    const meta = metaRow ? toNumber(metaRow[1]) : 0;
+
+    const headerInfo = findExactHeader(rows);
+    let total = 0, lastPay = 0, projPercent = 0;
+    if(headerInfo){
+      const { headerIdx, norm } = headerInfo;
+      const dataRow = rows[headerIdx + 1] || [];
+      const idxProj = norm.findIndex(c => c.includes('projecao'));
+      const idxTotal = norm.findIndex(c => c.includes('pago total') || c.includes('valor total'));
+      const idxHoje  = norm.findIndex(c => c.includes('pago hoje'));
+
+      if(idxTotal >= 0) total = toNumber(dataRow[idxTotal]);
+      if(idxHoje  >= 0) lastPay = toNumber(dataRow[idxHoje]);
+      if(idxProj  >= 0) projPercent = meta ? Math.round((toNumber(dataRow[idxProj])/meta)*100) : 0;
     }
-
-    const headerRow = rows[headerIdx];
-    const headerMap = buildHeaderMap(headerRow);
-    const dataRow = findBestDataRow(rows, headerIdx) || [];
-
-    // extract by known names (com múltiplas variações)
-    const getByNames = (names) => {
-      for(const name of names){
-        const key = Object.keys(headerMap).find(k => k.includes(normalize(name)));
-        if(key) return dataRow[headerMap[key]];
-      }
-      // fallback: try find any column containing R$ in header or data
-      for(let j=0;j<headerRow.length;j++){
-        if(String(headerRow[j]).toLowerCase().includes('meta') && dataRow[j]) return dataRow[j];
-      }
-      return undefined;
-    };
-
-    const metaCandidates = ['meta mensal','meta mês','meta','meta mensal (r$)'];
-    const pagoTotalCandidates = ['pago total','valor total','total','valor total captado','pago_total'];
-    const pagoHojeCandidates = ['pago hoje','pagos hoje','pagohoje','pago_hj','pago hoje (r$)'];
-    const projCandidates = ['projec','projeção','projecao','projecao mes','projecao mês'];
-
-    let meta = getByNames(metaCandidates);
-    let total = getByNames(pagoTotalCandidates);
-    let lastPay = getByNames(pagoHojeCandidates);
-    let proj = getByNames(projCandidates);
-
-    // se ainda undefined, tentar pegar por posição relativa (heurística)
-    if((meta===undefined || meta===null || meta==='') && rows.length>0){
-      // procurar na planilha por qualquer célula com "meta" em qualquer linha
-      for(const r of rows){
-        for(let i=0;i<r.length;i++){
-          if(normalize(r[i]||'').includes('meta')) { meta = r[i+1] || meta; break; }
-        }
-        if(meta) break;
-      }
-    }
-
-    if((total===undefined || total===null || total==='') || (lastPay===undefined || lastPay===null || lastPay==='')){
-      // tentar detectar linha de dados pela presença de R$ ou números grande (fallback)
-      const dataLine = rows.find(r => r.some(c => /R\$|[0-9]{2,}\.[0-9]{3}|[0-9]{3,}/.test(String(c))));
-      if(dataLine){
-        // heurística: buscar columns with numbers and assume order if header not found
-        const numbers = dataLine.map(c=> toNumber(c));
-        // try to assign: pick largest as total, pick a smaller as lastPay
-        const sorted = numbers.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
-        if(sorted.length>0 && (!total || toNumber(total)===0)) total = dataLine[sorted[0].i];
-        if(sorted.length>1 && (!lastPay || toNumber(lastPay)===0)) lastPay = dataLine[sorted[1].i];
-      }
-    }
-
-    // convert values safely
-    const metaN = toNumber(meta);
-    const totalN = toNumber(total);
-    const lastPayN = toNumber(lastPay);
-    let projPercent = 0;
-    if(proj && String(proj).includes('%')) projPercent = Math.round(toNumber(proj));
-    else if(proj && toNumber(proj)>0 && metaN>0) projPercent = Math.round( (toNumber(proj) / metaN) * 100 );
-    else if(metaN>0) projPercent = Math.round( (totalN / metaN) * 100 );
-
-    cache[f.id] = {
-      meta: metaN,
-      total: totalN,
-      projPercent,
-      lastPay: lastPayN
-    };
-
-    console.log(`Fonte ${f.id} -> meta:${metaN}, total:${totalN}, proj:${projPercent}, last:${lastPayN}`);
-    if(metaN===0 || totalN===0) console.warn(`Valores possivelmente incorretos para ${f.id} — verifique cabeçalhos na planilha ou veja preview no console.`);
-  }
-
-  // DESTAQUE
-  console.log('Carregando destaque:', DESTAQUE_URL);
-  const destaqueRows = await fetchAndParse(DESTAQUE_URL);
-  console.log('Preview destaque:', destaqueRows && destaqueRows.slice(0,6));
-  if(destaqueRows && destaqueRows.length>1){
-    const headers = destaqueRows[0].map(h=>h.trim());
-    const data = destaqueRows[1].map(h=>h.trim());
-    const obj = {};
-    for(let i=0;i<headers.length;i++) obj[headers[i]] = data[i] || "";
-    // normalize known keys
-    const keysLower = Object.fromEntries(Object.keys(obj).map(k => [normalize(k), obj[k]]));
-    destaqueInfo = {
-      Nome: obj['Nome'] || obj['nome'] || keysLower['nome'] || keysLower['name'] || "",
-      FotoURL: obj['Foto URL'] || obj['Foto'] || obj['foto url'] || obj['foto'] || keysLower['foto url'] || keysLower['foto'] || "",
-      Mensagem: obj['Mensagem'] || obj['mensagem'] || keysLower['mensagem'] || ""
-    };
-    console.log('Destaque lido:', destaqueInfo);
-  } else {
-    destaqueInfo = null;
+    cache[f.id] = { meta, total, projPercent, lastPay };
   }
 
   document.getElementById('loading-indicator').style.display = 'none';
@@ -371,14 +246,12 @@ async function loadAll(){
   setInterval(nextPage, PAGE_DURATION);
 }
 
-/* ------------- RENDER ------------- */
 function createCard(f){
   const d = cache[f.id];
   const card = document.createElement('div');
   card.className = 'card';
-  if(!d){
-    card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`;
-  } else {
+  if(!d){ card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`; }
+  else{
     card.innerHTML = `
       <div class="title">${f.id}</div>
       <div class="info">
@@ -392,61 +265,45 @@ function createCard(f){
   return card;
 }
 
-function createDestaqueCard(){
-  const nome = (destaqueInfo && (destaqueInfo.Nome)) || "Colaborador(a) em destaque";
-  let foto = (destaqueInfo && (destaqueInfo.FotoURL)) || "";
-  const msg = (destaqueInfo && (destaqueInfo.Mensagem)) || "Parabéns pelo excelente desempenho na semana!";
-
-  // normalizar link do Google Drive para uc?id=
-  if(foto && foto.includes('drive.google.com')){
-    const idMatch = foto.match(/[-\w]{25,}/);
-    if(idMatch) foto = `https://drive.google.com/uc?id=${idMatch[0]}`;
-  }
-
-  // append anti-cache timestamp
-  if(foto && !foto.includes('?')) foto = foto + '?t=' + Date.now();
-  else if(foto) foto = foto + '&t=' + Date.now();
-
-  const div = document.createElement('div');
-  div.className = 'destaque-semana';
-  div.innerHTML = `
-    <div class="destaque-card">
-      <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
-      <img id="foto-destaque" src="${foto}" alt="Destaque" class="foto-destaque" referrerpolicy="no-referrer" onerror="this.src='destaque.jpg'">
-      <h2>${nome}</h2>
-      <div class="estrelas">★★★★★</div>
-      <p>${msg}</p>
-    </div>
-  `;
-  return div;
-}
-
 function preparePages(){
   pages = [
     ["CREF19","CREF20","CREF21"].map(id => createCard(fontes.find(f=>f.id===id))),
     ["CRTR02","CRTR08","CRTR15","CRN11"].map(id => createCard(fontes.find(f=>f.id===id))),
-    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id))),
-    [createDestaqueCard()]
+    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id)))
   ];
+
+  // === PÁGINA 4: DESTAQUE DA SEMANA COBRANÇA ===
+  const destaque = document.createElement('div');
+  destaque.className = 'destaque-semana';
+  destaque.innerHTML = `
+    <div class="destaque-card">
+      <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
+      <img src="destaque.jpg" alt="Operadora Destaque" class="foto-destaque">
+      <h2>Maria Silva</h2>
+      <div class="estrelas">★★★★★</div>
+      <p>Parabéns pelo excelente desempenho, comprometimento e resultados incríveis nesta semana! 👏</p>
+    </div>
+  `;
+  pages.push([destaque]);
 }
 
-function showPage(idx){
-  currentPage = idx;
+function showPage(pageIdx){
+  currentPage = pageIdx;
   const main = document.getElementById('main-content');
   main.innerHTML = '';
-  const cards = pages[idx];
+  const cards = pages[pageIdx];
   if(!cards) return;
   main.style.gridTemplateColumns = `repeat(${cards.length}, 1fr)`;
-  cards.forEach(c=> main.appendChild(c));
+  cards.forEach(c => main.appendChild(c));
 }
-function nextPage(){ showPage((currentPage+1) % pages.length); }
 
-/* ------------- auto reload and click advance ------------- */
-setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 120000); // 2 min refresh
-document.addEventListener('click', ()=> nextPage());
+function nextPage(){
+  const nextIdx = (currentPage +1) % pages.length;
+  showPage(nextIdx);
+}
 
-/* ------------- start ------------- */
 loadAll();
+setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 120000); // 2 minutos
 </script>
 </body>
 </html>
