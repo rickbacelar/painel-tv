@@ -208,7 +208,7 @@ function createDestaqueCard(){
   const c=document.createElement("div");c.className="destaque-semana";
   c.innerHTML=`<div class="destaque-card">
   <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
-  <img src="${f}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
+  <img src="${f}" alt="Destaque" class="foto-destaque" referrerpolicy="no-referrer" onerror="this.src='destaque.jpg'">
   <h2>${n}</h2><div class="estrelas">★★★★★</div><p>${m}</p></div>`;return c;
 }
 
