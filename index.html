@@ -7,14 +7,14 @@
 <style>
 :root{--orange:#FF6B00;--dark:#2E2E2E;--bg:#F5F5F6;--card:#FFFFFF;--muted:#8A8A8A;}
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:'Inter',system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--dark);}
+html,body{height:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--dark);}
 .app{display:flex;flex-direction:column;height:100%;}
 header{background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);color:white;padding:20px 40px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .header-title{display:flex;align-items:center;gap:20px;font-weight:800;font-size:48px;letter-spacing:0.5px;}
 .logo-dot{width:24px;height:24px;border-radius:6px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
 .logo-img{height:110px;width:auto;object-fit:contain;background:#fff;border-radius:10px;padding:8px;box-shadow:0 0 15px rgba(0,0,0,0.2);}
 .main{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:40px;padding:40px;}
-.card{background:var(--card);border-radius:24px;padding:36px;box-shadow:0 10px 25px rgba(0,0,0,0.08);flex:1 1 460px;max-width:560px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-top:8px solid var(--orange);transition:transform 0.3s ease, box-shadow 0.3s ease;}
+.card{background:var(--card);border-radius:24px;padding:36px;box-shadow:0 10px 25px rgba(0,0,0,0.08);flex:1 1 460px;max-width:560px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-top:8px solid var(--orange);transition:transform 0.3s ease,box-shadow 0.3s ease;}
 .card:hover{transform:translateY(-4px);box-shadow:0 14px 35px rgba(0,0,0,0.12);}
 .title{font-size:46px;color:var(--dark);font-weight:900;margin-bottom:28px;text-transform:uppercase;letter-spacing:1px;}
 .info{display:flex;flex-direction:column;gap:16px;font-size:38px;font-weight:600;color:var(--dark);}
@@ -41,7 +41,7 @@ header{background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);color:whit
 </div>
 
 <script>
-// ============ CONFIG ============
+// ---------- CONFIG ----------
 const fontes = [
   { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
   { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
@@ -55,66 +55,54 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 10000;       // fetch a cada 10s
-const PAGE_RELOAD_MS = 15000;   // reload completo a cada 15s (cache-busting)
+const REFRESH_MS = 10000;   // fetch a cada 10s
+const PAGE_RELOAD_MS = 15000; // reload completo a cada 15s
+
 let cache = {};
 
-// ============ HELPERS ============
-// CSV parser robusto: respeita aspas e vírgulas dentro de campos
+// ---------- HELPERS ----------
 function parseCSV(text){
+  // parser que respeita aspas e vírgulas internas
   const rows = [];
   let cur = '', row = [], inQuotes = false;
-  for (let i = 0; i < text.length; i++){
+  for (let i=0; i<text.length; i++){
     const ch = text[i];
-    if (ch === '"' ) {
-      // se próximo também é ", é escape de quote
-      if (inQuotes && text[i+1] === '"') { cur += '"'; i++; continue; }
+    if (ch === '"'){
+      if (inQuotes && text[i+1] === '"'){ cur += '"'; i++; continue; }
       inQuotes = !inQuotes;
       continue;
     }
-    if (!inQuotes && (ch === '\n' || ch === '\r')) {
+    if (!inQuotes && (ch === '\n' || ch === '\r')){
       if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
       cur = ''; row = [];
-      // pular \r\n
       if (ch === '\r' && text[i+1] === '\n') i++;
       continue;
     }
-    if (!inQuotes && ch === ',') {
-      row.push(cur); cur = ''; continue;
-    }
+    if (!inQuotes && ch === ','){ row.push(cur); cur = ''; continue; }
     cur += ch;
   }
-  // último campo
   if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
-  // remover linhas completamente vazias
   return rows.filter(r => r.some(c => c !== ''));
 }
 
-function normalizeText(s){
-  if(s===undefined || s===null) return "";
-  return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase();
+function normalize(s){
+  if(s===undefined || s===null) return '';
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
 }
 
 function toNumber(v){
-  if(v === undefined || v === null) return 0;
-  // já é número?
-  if(typeof v === "number") return isFinite(v)?v:0;
+  if(v===undefined || v===null) return 0;
+  if(typeof v === 'number') return isFinite(v)?v:0;
   let s = String(v).trim();
-  if(s === "" ) return 0;
-  // remove R$, espaços, porcentagem, etc
-  s = s.replace(/\s/g,"").replace(/R\$|r\$|%/g,"");
-  // Sevieram vírgulas como separador decimal e ponto como milhar: 30.000,00 -> 30000.00
-  // Remover tudo que não número, ponto ou vírgula, hífen
-  s = s.replace(/[^0-9\-,.]/g,"");
-  // Se há tanto '.' quanto ',', assumir '.' milhar e ',' decimal -> trocar '.' por '' e ',' por '.'
+  if(!s) return 0;
+  s = s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
+  // lidar com milhar e decimal
   if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){
-    s = s.replace(/\./g,'').replace(/,/g,'.');
+    s = s.replace(/\./g,'').replace(/,/g,'.'); // 30.000,00 -> 30000.00
   } else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){
-    // só vírgula -> decimal
-    s = s.replace(/,/g,'.');
+    s = s.replace(/,/g,'.'); // 30000,50 -> 30000.50
   } else {
-    // só pontos (pode ser 30000 or 30.000) -> remover pontos
-    s = s.replace(/\./g,'');
+    s = s.replace(/\./g,''); // 30000 or 30.000 -> 30000
   }
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
@@ -126,113 +114,98 @@ function formatBR(v){
 
 async function fetchAndParse(url){
   try{
-    const res = await fetch(url + "&nocache=" + Date.now(), { cache: "no-store" });
-    if(!res.ok) throw new Error("HTTP " + res.status);
+    const res = await fetch(url + "&nocache=" + Date.now(), { cache: 'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
     const txt = await res.text();
-    return parseCSV(txt);
+    const rows = parseCSV(txt);
+    return rows;
   }catch(e){
-    console.error("fetch error:", e);
+    console.error('fetch error for', url, e);
     return null;
   }
 }
 
-// encontra cabeçalho e mapeia colunas por sinônimos
-function findHeaderMapping(rows){
-  const synonyms = {
-    proj: ['projecao', 'projecao mes','projecao_mensal','projecao mês','projecao_mes','projecao','projecao_mes','projecao mensal','projecao_mês','projecao%','projecao%','projecao porcento','projecao%'],
-    total: ['pago total','valor total','valor total captado','valor total captado','total','valor captado','pago_total','valor_total','totalcaptado'],
-    hoje: ['pago hoje','pagos hoje','pagohoje','pago_hoje','hoje','pagos_hoje']
-  };
-
+// ---------- lógica específica para seu formato ----------
+function findExactHeader(rows){
+  // procura de forma explícita a linha que contenha "Dias Trabalhados" ou que contenha "Pago Total" etc
   for(let i=0;i<rows.length;i++){
-    const row = rows[i];
-    const norm = row.map(c => normalizeText(c));
-    const mapping = {};
-    for(let j=0;j<norm.length;j++){
-      const c = norm[j];
-      if(!c) continue;
-      // checar cada sinônimo como substring
-      for(const key in synonyms){
-        for(const syn of synonyms[key]){
-          const synNorm = syn.replace(/\s/g,'');
-          if(c.includes(syn) || c.includes(synNorm) || syn.includes(c)) {
-            mapping[key] = j;
-            break;
-          }
-        }
-        if(mapping[key] !== undefined) break;
-      }
-    }
-    // se encontramos pelo menos total ou hoje, retornamos
-    if(mapping.total !== undefined || mapping.hoje !== undefined || mapping.proj !== undefined){
-      return { headerIdx: i, mapping };
+    const norm = rows[i].map(c => normalize(c));
+    // condição: linha que contenha pelo menos um desses títulos
+    if(norm.some(c => c.includes('dias trabalh') || c.includes('pago total') || c.includes('pago hoje') || c.includes('projecao') || c.includes('projecao mes') || c.includes('projecao m') || c.includes('projecao'))){
+      return { headerIdx: i, norm };
     }
   }
   return null;
 }
 
-// fallback heuristics: da uma linha de dados, escolhe a coluna com maior valor (provavelmente total) ou penúltima, etc.
-function heuristicPickTotal(dataRow){
-  const nums = dataRow.map(c => toNumber(c));
-  // pegar maior valor absoluto
-  let max = 0, idx = -1;
-  for(let i=0;i<nums.length;i++){
-    if(nums[i] > max){ max = nums[i]; idx = i; }
-  }
-  return { idx, max };
-}
-
-// ============ LOAD / RENDER ============
+// ---------- load / render ----------
 async function loadAll(){
   for(const f of fontes){
     const rows = await fetchAndParse(f.url);
     if(!rows){ cache[f.id] = null; continue; }
 
-    // meta: procurar linha que comece com 'meta' (ou 'meta mensal')
-    let meta = 0;
-    const metaRow = rows.find(r => normalizeText(r[0]).includes('meta'));
-    if(metaRow) meta = toNumber(metaRow[1]);
+    // debug: mostrar primeiras linhas no console (útil para ver o CSV bruto)
+    console.log('---', f.id, 'rows sample:', rows.slice(0,8));
 
-    // localizar cabeçalho
-    const headerInfo = findHeaderMapping(rows);
-    let total = 0, lastPay = 0, projPercent = 0, projRaw = 0;
+    // meta mensal (procura linha onde a primeira célula contenha "meta" ou "meta mensal")
+    const metaRow = rows.find(r => normalize(r[0]).includes('meta'));
+    const meta = metaRow ? toNumber(metaRow[1]) : 0;
 
+    // procurar cabeçalho exato (o cabeçalho com Dias Trabalhados / Dias do Mês / Projeção Mês / Pago Total / Pago Hoje)
+    const headerInfo = findExactHeader(rows);
+    let total = 0, lastPay = 0, projPercent = 0;
     if(headerInfo){
-      const { headerIdx, mapping } = headerInfo;
+      const { headerIdx, norm } = headerInfo;
       const dataRow = rows[headerIdx + 1] || [];
+      // achar índices por matching estrito de nomes vistos no seu exemplo
+      const idxProj = norm.findIndex(c => c.includes('projecao') || c.includes('projecao mes') || c.includes('projecao m') || c.includes('projecao_m'));
+      const idxTotal = norm.findIndex(c => c.includes('pago total') || c.includes('valor total') || c.includes('valor total captado') || c.includes('pago_total'));
+      const idxHoje  = norm.findIndex(c => c.includes('pago hoje') || c.includes('pagos hoje') || c.includes('pagohoje') || c.includes('pago_hoje'));
 
-      if(mapping.total !== undefined) total = toNumber(dataRow[mapping.total]);
-      if(mapping.hoje !== undefined) lastPay = toNumber(dataRow[mapping.hoje]);
-      if(mapping.proj !== undefined) projRaw = toNumber(dataRow[mapping.proj]);
+      // logs para debugging
+      console.log(`${f.id} headerIdx=${headerIdx} mapping proj:${idxProj}, total:${idxTotal}, hoje:${idxHoje}`, 'header row:', norm, 'dataRow:', dataRow);
 
-      // fallback se total for zero: tentar heurística na dataRow
-      if((!total || total === 0) && dataRow.length){
-        const h = heuristicPickTotal(dataRow);
-        if(h.max > 0) total = h.max;
+      if(idxTotal >= 0) total = toNumber(dataRow[idxTotal]);
+      if(idxHoje  >= 0) lastPay = toNumber(dataRow[idxHoje]);
+      if(idxProj  >= 0) {
+        // projRaw pode ser valor absoluto (R$) ou porcentagem. Preferimos calcular % via meta quando possível.
+        const projRaw = toNumber(dataRow[idxProj]);
+        // se projRaw parece um valor monetário (maior que meta), preferir usar meta->% posterior
+        // aqui apenas guardamos projRaw; projPercent será calculado abaixo
+        projPercent = projRaw; // fallback
       }
 
-      projPercent = meta ? Math.round((total / meta) * 100) : (projRaw ? Math.round(projRaw) : 0);
-
-    } else {
-      // fallback global: procurar última linha com muitos números
-      let found = false;
-      for(let i = rows.length - 1; i >= 0; i--){
-        const line = rows[i].map(c => c.trim()).filter(c => c !== '');
-        if(line.length >= 2){
-          // extrair números e pegar maiores
-          const nums = line.map(c => toNumber(c)).filter(n=>n>0);
-          if(nums.length){
-            // assumir que o maior é o total e o último é o Pago Hoje
-            const sorted = [...nums].sort((a,b)=>b-a);
-            total = sorted[0] || 0;
-            lastPay = nums[nums.length-1] || 0;
-            found = true;
-            break;
+      // se total parece zerado (0), tentar heurística: procurar maior número na dataRow
+      if((!total || total === 0) && dataRow.length){
+        const nums = dataRow.map(c=>toNumber(c));
+        let max = 0, maxIdx = -1;
+        for(let i=0;i<nums.length;i++){ if(nums[i] > max){ max = nums[i]; maxIdx = i; } }
+        if(maxIdx !== -1){
+          console.log(`${f.id} heuristic pick: index ${maxIdx} value ${max}`);
+          total = max;
+          // se hoje estava vazio, tentar pegar último número como hoje
+          if(!lastPay){
+            const lastNum = nums[nums.length-1] || 0;
+            if(lastNum && lastNum !== total) lastPay = lastNum;
           }
         }
       }
-      if(!found){
-        total = 0; lastPay = 0; projPercent = 0;
+
+      // calcular projPercent a partir do total e meta (se meta disponível)
+      projPercent = meta ? Math.round((total / meta) * 100) : (projPercent || 0);
+    } else {
+      // fallback global: pegar última linha de dados e tirar maiores valores
+      for(let i = rows.length - 1; i >= 0; i--){
+        const line = rows[i].map(c=>c.trim()).filter(c=>c!=='');
+        if(line.length >= 2){
+          const nums = line.map(c=>toNumber(c)).filter(n=>n>0);
+          if(nums.length){
+            nums.sort((a,b)=>b-a);
+            total = nums[0] || 0;
+            lastPay = nums[nums.length-1] || 0;
+            break;
+          }
+        }
       }
     }
 
@@ -268,11 +241,11 @@ function renderAll(){
   }
 }
 
-// inicial
+// inicializa e agendamento
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
-// força reload completo para burlar cache (mas faz fetch também a cada REFRESH_MS)
+// reload completo a cada PAGE_RELOAD_MS para burlar cache do Google (15s)
 setInterval(()=>{
   const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
   const separator = urlBase.includes('?') ? '&' : '?';
