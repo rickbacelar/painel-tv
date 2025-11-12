@@ -169,49 +169,116 @@ const DESTAQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoS
 const PAGE_DURATION = 30000; 
 let cache = {}, currentPage = 0, pages = [], destaqueInfo = null;
 
-/* === parse + normalização + formatação === */
-function parseCSV(t){const r=[],n=(t||"").split(/\r?\n/);for(const e of n){if(!e.trim())continue;const i=[],a=e.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)||[];for(let o of a)i.push(o.replace(/^"|"$/g,"").trim());r.push(i)}return r}
-function normalize(s){return s?String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase():""}
-function toNumber(v){if(v==null)return 0;let s=String(v).replace(/\s|R\$|r\$|%/g,"");if(s.includes(".")&&s.includes(","))s=s.replace(/\./g,"").replace(/,/g,".");else if(s.includes(","))s=s.replace(/,/g,".");else s=s.replace(/\./g,"");const n=parseFloat(s);return isNaN(n)?0:n}
-function formatBR(v){return(toNumber(v)).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-function findExactHeader(r){for(let i=0;i<r.length;i++){const n=r[i].map(c=>normalize(c));if(n.some(c=>c.includes("dias trabalh")||c.includes("pago total")||c.includes("pago hoje")||c.includes("projecao")||c.includes("projeção")))return{headerIdx:i,norm:n}}return null}
-async function fetchAndParse(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"nocache="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);return parseCSV(await r.text())}catch(e){console.error("fetch error",u,e);return null}}
+/* === PARSER CSV CORRIGIDO === */
+function parseCSV(text) {
+  const rows = [];
+  let insideQuote = false, value = "", row = [];
+  for (let c of text) {
+    if (c === '"') {
+      insideQuote = !insideQuote;
+    } else if (c === ',' && !insideQuote) {
+      row.push(value.trim());
+      value = "";
+    } else if ((c === '\n' || c === '\r') && !insideQuote) {
+      if (value || row.length) { row.push(value.trim()); rows.push(row); row = []; value = ""; }
+    } else {
+      value += c;
+    }
+  }
+  if (value || row.length) row.push(value.trim()), rows.push(row);
+  return rows.filter(r => r.length > 0);
+}
 
+/* === Funções auxiliares === */
+function normalize(s){return s?String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase():"";}
+function toNumber(v){if(!v)return 0;let s=String(v).replace(/\s|R\$|r\$|%/g,"");if(s.includes(".")&&s.includes(","))s=s.replace(/\./g,"").replace(/,/g,".");else if(s.includes(","))s=s.replace(/,/g,".");else s=s.replace(/\./g,"");const n=parseFloat(s);return isNaN(n)?0:n;}
+function formatBR(v){return(toNumber(v)).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+function findExactHeader(rows){for(let i=0;i<rows.length;i++){const n=rows[i].map(c=>normalize(c));if(n.some(c=>c.includes("dias trabalh")||c.includes("pago total")||c.includes("pago hoje")||c.includes("projecao")||c.includes("projeção")))return{headerIdx:i,norm:n}}return null;}
+async function fetchAndParse(url){
+  try {
+    const r=await fetch(url+(url.includes("?")?"&":"?")+"nocache="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const t=await r.text();
+    return parseCSV(t);
+  } catch(e) {
+    console.error("Erro ao buscar",url,e);
+    return null;
+  }
+}
+
+/* === Leitura e exibição === */
 async function loadAll(){
   for(const f of fontes){
-    const rows=await fetchAndParse(f.url);if(!rows){cache[f.id]=null;continue;}
+    const rows=await fetchAndParse(f.url);
+    if(!rows){cache[f.id]=null;continue;}
     const metaRow=rows.find(r=>normalize(r[0]).includes("meta"));const meta=metaRow?toNumber(metaRow[1]):0;
     const h=findExactHeader(rows);let total=0,last=0,proj=0;
-    if(h){const d=rows[h.headerIdx+1]||[],n=h.norm,ip=n.findIndex(c=>c.includes("projecao")||c.includes("projeção")),it=n.findIndex(c=>c.includes("pago total")||c.includes("valor total")),ih=n.findIndex(c=>c.includes("pago hoje"));if(it>=0)total=toNumber(d[it]);if(ih>=0)last=toNumber(d[ih]);if(ip>=0){const v=d[ip];proj=String(v).includes("%")?Math.round(toNumber(v)):meta?Math.round(toNumber(v)/meta*100):Math.round(toNumber(v));}}
+    if(h){
+      const d=rows[h.headerIdx+1]||[],n=h.norm;
+      const ip=n.findIndex(c=>c.includes("projecao")||c.includes("projeção"));
+      const it=n.findIndex(c=>c.includes("pago total")||c.includes("valor total"));
+      const ih=n.findIndex(c=>c.includes("pago hoje"));
+      if(it>=0) total=toNumber(d[it]);
+      if(ih>=0) last=toNumber(d[ih]);
+      if(ip>=0){const v=d[ip];proj=String(v).includes("%")?Math.round(toNumber(v)):meta?Math.round(toNumber(v)/meta*100):Math.round(toNumber(v));}
+    }
     cache[f.id]={meta,total,projPercent:proj,lastPay:last};
   }
+
+  // === Destaque da Semana ===
   const dr=await fetchAndParse(DESTAQUE_URL);
-  if(dr&&dr.length>1){const h=dr[0].map(x=>x.trim()),d=dr[1];destaqueInfo=Object.fromEntries(d.map((v,i)=>[h[i],v.trim()]))}
+  if(dr && dr.length>1){
+    const headers = dr[0].map(x => x.trim());
+    const data = dr[1].map(x => x.trim());
+    destaqueInfo = Object.fromEntries(headers.map((h,i)=>[h, data[i] || ""]));
+  }
+
   document.getElementById("loading-indicator").style.display="none";
-  preparePages();showPage(0);
-  setInterval(nextPage,PAGE_DURATION);
+  preparePages();
+  showPage(0);
+  setInterval(nextPage, PAGE_DURATION);
 }
 
-/* === render === */
-function createCard(f){const d=cache[f.id];const c=document.createElement("div");c.className="card";
-if(!d){c.innerHTML=`<div class="title">${f.id}</div><div>Sem dados</div>`;}
-else{c.innerHTML=`<div class="title">${f.id}</div><div class="info">
-<div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
-<div><strong>Valor Total Captado:</strong> ${formatBR(d.total)}</div>
-<div><strong>Projeção:</strong> ${d.projPercent}%</div>
-<div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div></div>`;}return c;}
+/* === Cartões === */
+function createCard(f){
+  const d=cache[f.id];
+  const c=document.createElement("div");c.className="card";
+  if(!d){
+    c.innerHTML=`<div class="title">${f.id}</div><div>Sem dados</div>`;
+  }else{
+    c.innerHTML=`<div class="title">${f.id}</div><div class="info">
+    <div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
+    <div><strong>Valor Total Captado:</strong> ${formatBR(d.total)}</div>
+    <div><strong>Projeção:</strong> ${d.projPercent}%</div>
+    <div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div></div>`;
+  }
+  return c;
+}
 
 function createDestaqueCard(){
-  const n=(destaqueInfo&&(destaqueInfo["Nome"]||destaqueInfo["nome"]))||"Colaborador(a) em destaque";
-  const f=(destaqueInfo&&(destaqueInfo["Foto URL"]||destaqueInfo["Foto"]||destaqueInfo["foto url"]))||"destaque.jpg";
-  const m=(destaqueInfo&&(destaqueInfo["Mensagem"]||destaqueInfo["mensagem"]))||"Parabéns pelo excelente desempenho na semana!";
+  const n=(destaqueInfo && (destaqueInfo["Nome"] || destaqueInfo["nome"])) || "Colaborador(a) em destaque";
+  let f=(destaqueInfo && (destaqueInfo["Foto URL"] || destaqueInfo["foto"] || destaqueInfo["Foto"])) || "";
+  const m=(destaqueInfo && (destaqueInfo["Mensagem"] || destaqueInfo["mensagem"])) || "Parabéns pelo excelente desempenho na semana!";
+
+  // Corrige link do Drive automaticamente
+  if(f.includes("drive.google.com/file/d/")){
+    const id = f.match(/\/d\/(.*?)(\/|$)/);
+    if(id && id[1]) f = `https://drive.google.com/uc?export=view&id=${id[1]}`;
+  }
+
   const c=document.createElement("div");c.className="destaque-semana";
-  c.innerHTML=`<div class="destaque-card">
-  <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
-  <img src="${f}" alt="Destaque" class="foto-destaque" referrerpolicy="no-referrer" onerror="this.src='destaque.jpg'">
-  <h2>${n}</h2><div class="estrelas">★★★★★</div><p>${m}</p></div>`;return c;
+  c.innerHTML=`
+  <div class="destaque-card">
+    <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
+    <img src="${f}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
+    <h2>${n}</h2>
+    <div class="estrelas">★★★★★</div>
+    <p>${m}</p>
+  </div>`;
+  return c;
 }
 
+/* === Páginas === */
 function preparePages(){
   pages=[
     ["CREF19","CREF20","CREF21"].map(i=>createCard(fontes.find(f=>f.id===i))),
@@ -221,16 +288,28 @@ function preparePages(){
   ];
 }
 
-function showPage(i){currentPage=i;const m=document.getElementById("main-content");m.innerHTML="";const c=pages[i];if(!c)return;m.style.gridTemplateColumns=`repeat(${c.length},1fr)`;c.forEach(e=>m.appendChild(e));}
-function nextPage(){showPage((currentPage+1)%pages.length);}
+function showPage(i){
+  currentPage=i;
+  const m=document.getElementById("main-content");
+  m.innerHTML="";
+  const c=pages[i];
+  if(!c)return;
+  m.style.gridTemplateColumns=`repeat(${c.length},1fr)`;
+  c.forEach(e=>m.appendChild(e));
+}
+
+function nextPage(){
+  showPage((currentPage+1)%pages.length);
+}
+
+/* Atualização automática a cada 2 minutos */
 setInterval(()=>{window.location.replace(window.location.pathname+"?_="+Date.now())},120000);
+
 loadAll();
 
-/* === clique manual para avançar === */
-document.addEventListener("click",()=>{
-  currentPage=(currentPage+1)%pages.length;
-  showPage(currentPage);
-});
+/* Clique manual para avançar */
+document.addEventListener("click",()=>nextPage());
 </script>
+
 </body>
 </html>
