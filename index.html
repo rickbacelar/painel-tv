@@ -63,6 +63,69 @@ header{
   letter-spacing:0.5px;
 }
 .center{display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:var(--dark);}
+
+/* === DESTAQUE DA SEMANA COBRANÇA === */
+.destaque-semana{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  text-align:center;
+  animation:fadeIn 1.5s ease;
+}
+
+.destaque-card{
+  background: linear-gradient(135deg, var(--orange) 0%, #ff9330 100%);
+  border-radius:40px;
+  padding:80px 100px;
+  color:white;
+  box-shadow:0 0 30px rgba(0,0,0,0.3);
+  animation: brilhar 2s infinite alternate;
+}
+
+@keyframes brilhar{
+  from{box-shadow:0 0 20px rgba(255,255,255,0.4);}
+  to{box-shadow:0 0 50px rgba(255,255,255,0.9);}
+}
+
+@keyframes fadeIn{
+  from{opacity:0; transform:scale(0.95);}
+  to{opacity:1; transform:scale(1);}
+}
+
+.foto-destaque{
+  width:350px;
+  height:350px;
+  object-fit:cover;
+  border-radius:50%;
+  border:8px solid white;
+  margin:40px 0;
+  box-shadow:0 0 25px rgba(255,255,255,0.6);
+}
+
+.estrelas{
+  font-size:3rem;
+  color:gold;
+  text-shadow:0 0 15px rgba(255,255,255,0.8);
+  margin-bottom:10px;
+}
+
+.destaque-card h1{
+  font-size:3.5rem;
+  margin-bottom:25px;
+  text-shadow:0 3px 10px rgba(0,0,0,0.3);
+}
+
+.destaque-card h2{
+  font-size:3rem;
+  margin-bottom:20px;
+}
+
+.destaque-card p{
+  font-size:2rem;
+  margin-top:15px;
+  font-weight:600;
+}
 </style>
 </head>
 <body>
@@ -208,6 +271,20 @@ function preparePages(){
     ["CRTR02","CRTR08","CRTR15","CRN11"].map(id => createCard(fontes.find(f=>f.id===id))),
     ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id)))
   ];
+
+  // === PÁGINA 4: DESTAQUE DA SEMANA COBRANÇA ===
+  const destaque = document.createElement('div');
+  destaque.className = 'destaque-semana';
+  destaque.innerHTML = `
+    <div class="destaque-card">
+      <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
+      <img src="destaque.jpg" alt="Operadora Destaque" class="foto-destaque">
+      <h2>Maria Silva</h2>
+      <div class="estrelas">★★★★★</div>
+      <p>Parabéns pelo excelente desempenho, comprometimento e resultados incríveis nesta semana! 👏</p>
+    </div>
+  `;
+  pages.push([destaque]);
 }
 
 function showPage(pageIdx){
