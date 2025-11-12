@@ -294,7 +294,7 @@ loadAll();
 setInterval(loadAll, REFRESH_MS);
 
 // --- Recarrega página inteira a cada 10 minutos ---
-const RELOAD_MS = 600000;
+const RELOAD_MS = 1000;
 setInterval(() => {
   const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
   const separator = urlBase.includes('?') ? '&' : '?';
