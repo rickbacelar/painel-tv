@@ -23,20 +23,17 @@ header{
   align-items:center;
   justify-content:space-between;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
-  font-size:36px;
 }
-.header-title{display:flex;align-items:center;gap:20px;font-weight:800;letter-spacing:0.5px;}
+.header-title{display:flex;align-items:center;gap:20px;font-weight:800;font-size:36px;letter-spacing:0.5px;}
 .logo-dot{width:24px;height:24px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
 .logo-img{height:120px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
 .main{
   flex:1;
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  justify-items:center;
+  align-items:center;
   gap:25px;
   padding:25px;
-  justify-items:stretch;
-  align-items:stretch;
-  overflow-y:auto;
 }
 .card{
   background:var(--card);
@@ -51,7 +48,6 @@ header{
   border-top:6px solid var(--orange);
   transition:transform 0.3s ease,box-shadow 0.3s ease;
 }
-.card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,0.12);}
 .title{font-size:3rem;color:var(--dark);font-weight:900;margin-bottom:25px;text-transform:uppercase;letter-spacing:1px;}
 .info{display:flex;flex-direction:column;gap:16px;font-size:2rem;font-weight:600;color:var(--dark);}
 .info strong{color:var(--orange);font-weight:700;}
@@ -67,7 +63,6 @@ header{
 }
 .center{display:flex;align-items:center;justify-content:center;height:100%;font-size:2.5rem;color:var(--dark);}
 </style>
-
 </head>
 <body>
 <div class="app">
@@ -87,7 +82,6 @@ header{
 </div>
 
 <script>
-// ---------- CONFIG ----------
 const fontes = [
   { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
   { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
@@ -101,12 +95,12 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 60000;   
-const PAGE_RELOAD_MS = 60000; 
-
+const PAGE_DURATION = 20000; // 20 segundos
 let cache = {};
+let currentPage = 0;
+let pages = [];
 
-// ---------- HELPERS ----------
+// ---------- FUNÇÕES AUXILIARES ----------
 function parseCSV(text){
   const rows = [];
   let cur = '', row = [], inQuotes = false;
@@ -129,7 +123,6 @@ function parseCSV(text){
   if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
   return rows.filter(r => r.some(c => c !== ''));
 }
-
 function normalize(s){ return s? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase() : ''; }
 function toNumber(v){
   if(v===undefined || v===null) return 0;
@@ -150,7 +143,6 @@ async function fetchAndParse(url){
        return parseCSV(await res.text());
   }catch(e){ console.error('fetch error for', url, e); return null; }
 }
-
 function findExactHeader(rows){
   for(let i=0;i<rows.length;i++){
     const norm = rows[i].map(c => normalize(c));
@@ -161,7 +153,7 @@ function findExactHeader(rows){
   return null;
 }
 
-// ---------- load / render ----------
+// ---------- LOAD / RENDER ----------
 async function loadAll(){
   for(const f of fontes){
     const rows = await fetchAndParse(f.url);
@@ -187,17 +179,17 @@ async function loadAll(){
   }
 
   document.getElementById('loading-indicator').style.display = 'none';
-  renderAll();
+  preparePages();
+  showPage(0);
+  setInterval(nextPage, PAGE_DURATION);
 }
 
-function renderAll(){
-  const main = document.getElementById('main-content');
-  main.innerHTML = '';
-  for(const f of fontes){
-    const d = cache[f.id];
-    const card = document.createElement('div');
-    card.className = 'card';
-    if(!d){ card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`; main.appendChild(card); continue; }
+function createCard(f){
+  const d = cache[f.id];
+  const card = document.createElement('div');
+  card.className = 'card';
+  if(!d){ card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`; }
+  else{
     card.innerHTML = `
       <div class="title">${f.id}</div>
       <div class="info">
@@ -207,14 +199,36 @@ function renderAll(){
         <div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div>
       </div>
     `;
-    main.appendChild(card);
   }
+  return card;
 }
 
-// inicializa e agendamento
+function preparePages(){
+  pages = [
+    ["CREF19","CREF20","CREF21"].map(id => createCard(fontes.find(f=>f.id===id))),
+    ["CRTR02","CRTR08","CRTR15","CRN11"].map(id => createCard(fontes.find(f=>f.id===id))),
+    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id)))
+  ];
+}
+
+function showPage(pageIdx){
+  currentPage = pageIdx;
+  const main = document.getElementById('main-content');
+  main.innerHTML = '';
+  const cards = pages[pageIdx];
+  if(!cards) return;
+  main.style.gridTemplateColumns = `repeat(${cards.length}, 1fr)`;
+  cards.forEach(c => main.appendChild(c));
+}
+
+function nextPage(){
+  const nextIdx = (currentPage +1) % pages.length;
+  showPage(nextIdx);
+}
+
+// inicializa
 loadAll();
-setInterval(loadAll, REFRESH_MS);
-setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, PAGE_RELOAD_MS);
+setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 60000);
 </script>
 </body>
 </html>
