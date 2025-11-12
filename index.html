@@ -21,14 +21,14 @@ html,body{
   color:var(--dark);
 }
 
-/* Estrutura principal */
+/* ESTRUTURA GERAL */
 .app{display:flex;flex-direction:column;height:100%;}
 
-/* HEADER */
+/* CABEÇALHO */
 header{
   background:linear-gradient(90deg,var(--dark),#444);
   color:white;
-  padding:18px 28px;
+  padding:20px 36px;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -36,42 +36,43 @@ header{
 .header-title{
   display:flex;
   align-items:center;
-  gap:16px;
-  font-weight:700;
-  font-size:32px; /* título maior */
+  gap:20px;
+  font-weight:800;
+  font-size:48px; /* 🔸 Título bem grande */
 }
 .logo-dot{
-  width:20px;height:20px;border-radius:4px;background:var(--orange);
-  box-shadow:0 2px 6px rgba(255,107,0,0.4);
+  width:28px;height:28px;border-radius:6px;background:var(--orange);
+  box-shadow:0 3px 8px rgba(255,107,0,0.5);
 }
 .logo-img{
-  height:80px;
+  height:120px;
   width:auto;
   object-fit:contain;
   background:white;
-  border-radius:10px;
-  padding:6px;
-  box-shadow:0 0 10px rgba(0,0,0,0.25);
+  border-radius:14px;
+  padding:8px;
+  box-shadow:0 0 18px rgba(0,0,0,0.25);
 }
 
-/* CARDS */
+/* CORPO PRINCIPAL */
 .main{
   flex:1;
   display:flex;
   flex-wrap:wrap;
-  gap:28px;
-  padding:28px;
+  gap:40px;
+  padding:40px;
   justify-content:center;
   align-items:stretch;
 }
 
+/* CARDS */
 .card{
   background:var(--card);
-  border-radius:20px;
-  padding:28px;
-  box-shadow:0 10px 24px rgba(0,0,0,0.1);
-  flex:1 1 400px;
-  max-width:500px;
+  border-radius:24px;
+  padding:36px;
+  box-shadow:0 10px 26px rgba(0,0,0,0.15);
+  flex:1 1 460px;
+  max-width:560px;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -82,39 +83,39 @@ header{
 .card:hover{transform:scale(1.02);}
 
 .title{
-  font-size:32px;
+  font-size:46px;
   color:var(--dark);
-  margin-bottom:20px;
-  font-weight:800;
+  margin-bottom:24px;
+  font-weight:900;
 }
 
-/* Informações principais */
+/* INFORMAÇÕES */
 .info{
   display:flex;
   flex-direction:column;
-  gap:14px;
-  font-size:26px;
-  font-weight:600;
+  gap:18px;
+  font-size:38px; /* 🔸 textos principais maiores */
+  font-weight:700;
   line-height:1.5;
 }
 .info strong{
-  font-size:28px;
+  font-size:40px;
   color:#222;
 }
 
-/* FOOTER */
+/* RODAPÉ */
 .footer{
-  padding:16px 24px;
+  padding:20px 30px;
   text-align:right;
   color:var(--muted);
-  font-size:20px;
+  font-size:28px;
 }
 .center{
   display:flex;
   align-items:center;
   justify-content:center;
   height:100%;
-  font-size:26px;
+  font-size:36px;
 }
 </style>
 </head>
@@ -153,7 +154,7 @@ const fontes = [
 let cache = {};
 const REFRESH_MS = 10000; // Atualiza dados a cada 10s
 
-// === FUNÇÕES AUXILIARES ===
+// === FUNÇÕES ===
 function parseCSV(text){return text.split(/\r?\n/).map(l=>l.split(",").map(c=>c.replace(/"/g,"").trim())).filter(r=>r.length>1);}
 function toNumber(v){if(!v)return 0;const cleaned=v.replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(/,/g,".");return parseFloat(cleaned)||0;}
 function formatBR(v){return v?.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0})||"R$ 0";}
