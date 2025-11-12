@@ -169,21 +169,16 @@ const DESTAQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoS
 const PAGE_DURATION = 30000; 
 let cache = {}, currentPage = 0, pages = [], destaqueInfo = null;
 
-/* === PARSER CSV CORRIGIDO === */
+/* === PARSER CSV === */
 function parseCSV(text) {
   const rows = [];
   let insideQuote = false, value = "", row = [];
   for (let c of text) {
-    if (c === '"') {
-      insideQuote = !insideQuote;
-    } else if (c === ',' && !insideQuote) {
-      row.push(value.trim());
-      value = "";
-    } else if ((c === '\n' || c === '\r') && !insideQuote) {
+    if (c === '"') insideQuote = !insideQuote;
+    else if (c === ',' && !insideQuote) { row.push(value.trim()); value = ""; }
+    else if ((c === '\n' || c === '\r') && !insideQuote) {
       if (value || row.length) { row.push(value.trim()); rows.push(row); row = []; value = ""; }
-    } else {
-      value += c;
-    }
+    } else value += c;
   }
   if (value || row.length) row.push(value.trim()), rows.push(row);
   return rows.filter(r => r.length > 0);
@@ -191,7 +186,7 @@ function parseCSV(text) {
 
 /* === Funções auxiliares === */
 function normalize(s){return s?String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase():"";}
-function toNumber(v){if(!v)return 0;let s=String(v).replace(/\s|R\$|r\$|%/g,"");if(s.includes(".")&&s.includes(","))s=s.replace(/\./g,"").replace(/,/g,".");else if(s.includes(","))s=s.replace(/,/g,".");else s=s.replace(/\./g,"");const n=parseFloat(s);return isNaN(n)?0:n;}
+function toNumber(v){if(!v)return 0;let s=String(v).replace(/\s|R\$|r\$|%/g,"");s=s.replace(/\./g,"").replace(/,/g,".");const n=parseFloat(s);return isNaN(n)?0:n;}
 function formatBR(v){return(toNumber(v)).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
 function findExactHeader(rows){for(let i=0;i<rows.length;i++){const n=rows[i].map(c=>normalize(c));if(n.some(c=>c.includes("dias trabalh")||c.includes("pago total")||c.includes("pago hoje")||c.includes("projecao")||c.includes("projeção")))return{headerIdx:i,norm:n}}return null;}
 async function fetchAndParse(url){
@@ -261,16 +256,16 @@ function createDestaqueCard(){
   const m=(destaqueInfo && (destaqueInfo["Mensagem"] || destaqueInfo["mensagem"])) || "Parabéns pelo excelente desempenho na semana!";
 
   // Corrige link do Drive automaticamente
-  if(f.includes("drive.google.com/file/d/")){
-    const id = f.match(/\/d\/(.*?)(\/|$)/);
-    if(id && id[1]) f = `https://drive.google.com/uc?export=view&id=${id[1]}`;
+  if(f.includes("drive.google.com")){
+    const match=f.match(/[-\w]{25,}/);
+    if(match) f=`https://drive.google.com/uc?id=${match[0]}`;
   }
 
   const c=document.createElement("div");c.className="destaque-semana";
   c.innerHTML=`
   <div class="destaque-card">
     <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
-    <img src="${f}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
+    <img id="foto-destaque" src="${f}?t=${Date.now()}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
     <h2>${n}</h2>
     <div class="estrelas">★★★★★</div>
     <p>${m}</p>
@@ -305,11 +300,10 @@ function nextPage(){
 /* Atualização automática a cada 2 minutos */
 setInterval(()=>{window.location.replace(window.location.pathname+"?_="+Date.now())},120000);
 
-loadAll();
-
 /* Clique manual para avançar */
 document.addEventListener("click",()=>nextPage());
-</script>
 
+loadAll();
+</script>
 </body>
 </html>
