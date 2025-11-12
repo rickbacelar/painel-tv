@@ -7,70 +7,77 @@
 <style>
 :root{
   --orange:#FF6B00;
-  --dark:#1E1E1E;
-  --bg:#F4F4F6;
-  --card:#ffffff;
-  --muted:#777;
+  --dark:#2E2E2E;
+  --bg:#F5F5F6;
+  --card:#FFFFFF;
+  --muted:#8A8A8A;
 }
-*{box-sizing:border-box;}
+
+/* GERAL */
+*{box-sizing:border-box;margin:0;padding:0;}
 html,body{
   height:100%;
-  margin:0;
-  font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  font-family:'Inter', system-ui, Segoe UI, Roboto, sans-serif;
   background:var(--bg);
   color:var(--dark);
 }
 
-/* ESTRUTURA GERAL */
-.app{display:flex;flex-direction:column;height:100%;}
+/* CONTAINER */
+.app{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+}
 
 /* CABEÇALHO */
 header{
-  background:linear-gradient(90deg,var(--dark),#444);
+  background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);
   color:white;
-  padding:20px 36px;
+  padding:20px 40px;
   display:flex;
   align-items:center;
   justify-content:space-between;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
 .header-title{
   display:flex;
   align-items:center;
   gap:20px;
   font-weight:800;
-  font-size:48px; /* 🔸 Título bem grande */
+  font-size:48px;
+  letter-spacing:0.5px;
 }
 .logo-dot{
-  width:28px;height:28px;border-radius:6px;background:var(--orange);
-  box-shadow:0 3px 8px rgba(255,107,0,0.5);
+  width:24px;height:24px;border-radius:6px;background:var(--orange);
+  box-shadow:0 3px 10px rgba(255,107,0,0.5);
 }
 .logo-img{
-  height:120px;
+  height:110px;
   width:auto;
   object-fit:contain;
-  background:white;
-  border-radius:14px;
+  background:#fff;
+  border-radius:10px;
   padding:8px;
-  box-shadow:0 0 18px rgba(0,0,0,0.25);
+  box-shadow:0 0 15px rgba(0,0,0,0.2);
 }
 
-/* CORPO PRINCIPAL */
+/* CONTEÚDO PRINCIPAL */
 .main{
   flex:1;
   display:flex;
   flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
   gap:40px;
   padding:40px;
-  justify-content:center;
-  align-items:stretch;
 }
 
-/* CARDS */
+/* CARD */
 .card{
   background:var(--card);
   border-radius:24px;
   padding:36px;
-  box-shadow:0 10px 26px rgba(0,0,0,0.15);
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
   flex:1 1 460px;
   max-width:560px;
   display:flex;
@@ -78,37 +85,46 @@ header{
   justify-content:center;
   align-items:center;
   text-align:center;
-  transition:transform 0.3s;
+  border-top:8px solid var(--orange);
+  transition:transform 0.3s ease, box-shadow 0.3s ease;
 }
-.card:hover{transform:scale(1.02);}
+.card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 14px 35px rgba(0,0,0,0.12);
+}
 
+/* TÍTULO DO CONSELHO */
 .title{
   font-size:46px;
   color:var(--dark);
-  margin-bottom:24px;
   font-weight:900;
+  margin-bottom:28px;
+  text-transform:uppercase;
+  letter-spacing:1px;
 }
 
 /* INFORMAÇÕES */
 .info{
   display:flex;
   flex-direction:column;
-  gap:18px;
-  font-size:38px; /* 🔸 textos principais maiores */
-  font-weight:700;
-  line-height:1.5;
+  gap:16px;
+  font-size:38px;
+  font-weight:600;
+  color:var(--dark);
 }
 .info strong{
-  font-size:40px;
-  color:#222;
+  color:var(--orange);
+  font-weight:800;
 }
 
 /* RODAPÉ */
 .footer{
-  padding:20px 30px;
+  padding:20px 40px;
   text-align:right;
   color:var(--muted);
   font-size:28px;
+  background:#EFEFEF;
+  border-top:3px solid var(--orange);
 }
 .center{
   display:flex;
@@ -116,6 +132,7 @@ header{
   justify-content:center;
   height:100%;
   font-size:36px;
+  color:var(--dark);
 }
 </style>
 </head>
@@ -152,7 +169,7 @@ const fontes = [
 ];
 
 let cache = {};
-const REFRESH_MS = 10000; // Atualiza dados a cada 10s
+const REFRESH_MS = 10000;
 
 // === FUNÇÕES ===
 function parseCSV(text){return text.split(/\r?\n/).map(l=>l.split(",").map(c=>c.replace(/"/g,"").trim())).filter(r=>r.length>1);}
@@ -216,14 +233,8 @@ function renderAll(){
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
-// === RECARREGAR PÁGINA A CADA 15 SEGUNDOS ===
-const PAGE_RELOAD_MS = 45000;
-setInterval(()=>{
-  const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
-  const separator = urlBase.includes('?') ? '&' : '?';
-  const newUrl = urlBase + separator + '_=' + Date.now();
-  window.location.replace(newUrl);
-}, PAGE_RELOAD_MS);
+// === RELOAD A CADA 15s ===
+setInterval(()=>location.reload(),15000);
 </script>
 </body>
 </html>
