@@ -18,23 +18,30 @@ html,body{height:100%;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;bac
 header{
   background:linear-gradient(90deg,var(--dark) 0%, #3C3C3C 100%);
   color:white;
-  padding:10px 20px;
+  padding:15px 20px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
-.header-title{display:flex;align-items:center;gap:10px;font-weight:800;font-size:28px;letter-spacing:0.5px;}
-.logo-dot{width:16px;height:16px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
-.logo-img{height:80px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
-.main{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px;padding:20px;overflow-y:auto;}
+.header-title{display:flex;align-items:center;gap:12px;font-weight:800;font-size:32px;letter-spacing:0.5px;}
+.logo-dot{width:20px;height:20px;border-radius:4px;background:var(--orange);box-shadow:0 3px 10px rgba(255,107,0,0.5);}
+.logo-img{height:100px;width:auto;object-fit:contain;background:#fff;border-radius:6px;padding:4px;box-shadow:0 0 10px rgba(0,0,0,0.2);}
+.main{
+  flex:1;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  justify-content:center;
+  align-items:start;
+  gap:20px;
+  padding:20px;
+  overflow:hidden;
+}
 .card{
   background:var(--card);
   border-radius:16px;
   padding:20px;
   box-shadow:0 8px 20px rgba(0,0,0,0.08);
-  flex:1 1 220px;
-  max-width:280px;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -44,20 +51,20 @@ header{
   transition:transform 0.3s ease,box-shadow 0.3s ease;
 }
 .card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,0.12);}
-.title{font-size:22px;color:var(--dark);font-weight:900;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;}
-.info{display:flex;flex-direction:column;gap:8px;font-size:16px;font-weight:600;color:var(--dark);}
+.title{font-size:28px;color:var(--dark);font-weight:900;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;}
+.info{display:flex;flex-direction:column;gap:10px;font-size:18px;font-weight:600;color:var(--dark);}
 .info strong{color:var(--orange);font-weight:700;}
 .footer{
   padding:10px 20px;
   text-align:center;
   color:var(--muted);
-  font-size:16px;
+  font-size:18px;
   background:#EFEFEF;
   border-top:2px solid var(--orange);
   font-weight:600;
   letter-spacing:0.5px;
 }
-.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:18px;color:var(--dark);}
+.center{display:flex;align-items:center;justify-content:center;height:100%;font-size:20px;color:var(--dark);}
 </style>
 </head>
 <body>
@@ -92,12 +99,11 @@ const fontes = [
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 60000;   // fetch a cada 60s
-const PAGE_RELOAD_MS = 60000; // recarrega a página a cada 60s
+const REFRESH_MS = 60000;   
+const PAGE_RELOAD_MS = 60000; 
 
 let cache = {};
 
-// ---------- HELPERS ----------
 function parseCSV(text){
   const rows = [];
   let cur = '', row = [], inQuotes = false;
@@ -105,16 +111,14 @@ function parseCSV(text){
     const ch = text[i];
     if (ch === '"'){
       if (inQuotes && text[i+1] === '"'){ cur += '"'; i++; continue; }
-      inQuotes = !inQuotes;
-      continue;
+      inQuotes = !inQuotes; continue;
     }
     if (!inQuotes && (ch === '\n' || ch === '\r')){
       if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
       cur = ''; row = [];
-      if (ch === '\r' && text[i+1] === '\n') i++;
-      continue;
+      if (ch === '\r' && text[i+1] === '\n') i++; continue;
     }
-    if (!inQuotes && ch === ','){ row.push(cur); cur = ''; continue; }
+    if (!inQuotes && ch === ','){ row.push(cur); cur=''; continue; }
     cur += ch;
   }
   if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
@@ -124,72 +128,68 @@ function parseCSV(text){
 function normalize(s){ return s? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase() : ''; }
 function toNumber(v){
   if(v===undefined || v===null) return 0;
-  if(typeof v === 'number') return isFinite(v)?v:0;
+  if(typeof v==='number') return isFinite(v)?v:0;
   let s = String(v).trim();
   if(!s) return 0;
-  s = s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
+  s=s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
   if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){ s = s.replace(/\./g,'').replace(/,/g,'.'); }
-  else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){ s = s.replace(/,/g,'.'); }
-  else { s = s.replace(/\./g,''); }
-  const n = parseFloat(s);
-  return isNaN(n) ? 0 : n;
+  else if(s.indexOf(',')!==-1){ s=s.replace(/,/g,'.'); }
+  else{s=s.replace(/\./g,'');}
+  const n=parseFloat(s); return isNaN(n)?0:n;
 }
-function formatBR(v){ return v?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}) || 'R$ 0'; }
+function formatBR(v){ return v?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0})||'R$ 0'; }
 async function fetchAndParse(url){
-  try{ const res = await fetch(url + "&nocache=" + Date.now(), { cache: 'no-store' });
-       if(!res.ok) throw new Error('HTTP ' + res.status);
+  try{ const res=await fetch(url+"&nocache="+Date.now(),{cache:'no-store'});
+       if(!res.ok) throw new Error('HTTP '+res.status);
        return parseCSV(await res.text());
-  }catch(e){ console.error('fetch error for', url, e); return null; }
+  }catch(e){ console.error('fetch error for',url,e); return null; }
 }
-
 function findExactHeader(rows){
   for(let i=0;i<rows.length;i++){
-    const norm = rows[i].map(c => normalize(c));
-    if(norm.some(c => c.includes('dias trabalh') || c.includes('pago total') || c.includes('pago hoje') || c.includes('projecao'))){
-      return { headerIdx: i, norm };
+    const norm = rows[i].map(c=>normalize(c));
+    if(norm.some(c=>c.includes('dias trabalh')||c.includes('pago total')||c.includes('pago hoje')||c.includes('projecao'))){
+      return {headerIdx:i,norm};
     }
   }
   return null;
 }
 
-// ---------- load / render ----------
 async function loadAll(){
   for(const f of fontes){
-    const rows = await fetchAndParse(f.url);
-    if(!rows){ cache[f.id] = null; continue; }
+    const rows=await fetchAndParse(f.url);
+    if(!rows){ cache[f.id]=null; continue; }
 
-    const metaRow = rows.find(r => normalize(r[0]).includes('meta'));
-    const meta = metaRow ? toNumber(metaRow[1]) : 0;
+    const metaRow=rows.find(r=>normalize(r[0]).includes('meta'));
+    const meta=metaRow?toNumber(metaRow[1]):0;
 
-    const headerInfo = findExactHeader(rows);
-    let total = 0, lastPay = 0, projPercent = 0;
+    const headerInfo=findExactHeader(rows);
+    let total=0,lastPay=0,projPercent=0;
     if(headerInfo){
-      const { headerIdx, norm } = headerInfo;
-      const dataRow = rows[headerIdx + 1] || [];
-      const idxProj = norm.findIndex(c => c.includes('projecao'));
-      const idxTotal = norm.findIndex(c => c.includes('pago total') || c.includes('valor total'));
-      const idxHoje  = norm.findIndex(c => c.includes('pago hoje'));
-
-      if(idxTotal >= 0) total = toNumber(dataRow[idxTotal]);
-      if(idxHoje  >= 0) lastPay = toNumber(dataRow[idxHoje]);
-      if(idxProj  >= 0) projPercent = meta ? Math.round((toNumber(dataRow[idxProj])/meta)*100) : 0;
+      const {headerIdx,norm}=headerInfo;
+      const dataRow=rows[headerIdx+1]||[];
+      const idxProj=norm.findIndex(c=>c.includes('projecao'));
+      const idxTotal=norm.findIndex(c=>c.includes('pago total')||c.includes('valor total'));
+      const idxHoje=norm.findIndex(c=>c.includes('pago hoje'));
+      if(idxTotal>=0) total=toNumber(dataRow[idxTotal]);
+      if(idxHoje>=0) lastPay=toNumber(dataRow[idxHoje]);
+      if(idxProj>=0) projPercent=meta?Math.round((toNumber(dataRow[idxProj])/meta)*100):0;
     }
-    cache[f.id] = { meta, total, projPercent, lastPay };
+    cache[f.id]={meta,total,projPercent,lastPay};
   }
 
-  document.getElementById('loading-indicator').style.display = 'none';
+  document.getElementById('loading-indicator').style.display='none';
   renderAll();
 }
 
 function renderAll(){
-  const main = document.getElementById('main-content');
-  main.innerHTML = '';
+  const main=document.getElementById('main-content');
+  main.innerHTML='';
   for(const f of fontes){
-    const d = cache[f.id];
-    const card = document.createElement('div');
-    card.className = 'card';
-    if(!d){ card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`; main.appendChild(card); continue; }
-    card.innerHTML = `
+    const d=cache[f.id];
+    const card=document.createElement('div');
+    card.className='card';
+    if(!d){ card.innerHTML=`<div class="title">${f.id}</div><div>Sem dados</div>`; main.appendChild(card); continue; }
+    card.innerHTML=`
       <div class="title">${f.id}</div>
       <div class="info">
         <div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
@@ -202,10 +202,9 @@ function renderAll(){
   }
 }
 
-// inicializa e agendamento
 loadAll();
 setInterval(loadAll, REFRESH_MS);
-setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, PAGE_RELOAD_MS);
+setInterval(()=>{ window.location.replace(window.location.pathname+'?_='+Date.now()); }, PAGE_RELOAD_MS);
 </script>
 </body>
 </html>
