@@ -126,6 +126,12 @@ header{
   margin-top:15px;
   font-weight:600;
 }
+
+/* efeito de clique (leve flash visual) */
+body:active {
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
 </style>
 </head>
 <body>
@@ -146,7 +152,6 @@ header{
 </div>
 
 <script>
-/* suas fontes originais */
 const fontes = [
   { id: "CREF19", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1116505710&single=true&output=csv" },
   { id: "CREF20", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=195629568&single=true&output=csv" },
@@ -159,220 +164,73 @@ const fontes = [
   { id: "AMMV - ENEL", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=393476796&single=true&output=csv" },
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
-
-/* ajuste: coloque aqui o GID real da aba destaque_cobranca */
 const DESTAQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1188185218&single=true&output=csv";
 
-const PAGE_DURATION = 30000; // 30 segundos por página
-let cache = {};
-let currentPage = 0;
-let pages = [];
-let destaqueInfo = null;
+const PAGE_DURATION = 30000; 
+let cache = {}, currentPage = 0, pages = [], destaqueInfo = null;
 
-/* === parser CSV robusto (o mesmo que você já tinha) === */
-function parseCSV(text){
-  const rows = [];
-  let cur = '', row = [], inQuotes = false;
-  for (let i=0; i<text.length; i++){
-    const ch = text[i];
-    if (ch === '"'){
-      if (inQuotes && text[i+1] === '"'){ cur += '"'; i++; continue; }
-      inQuotes = !inQuotes;
-      continue;
-    }
-    if (!inQuotes && (ch === '\n' || ch === '\r')){
-      if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
-      cur = ''; row = [];
-      if (ch === '\r' && text[i+1] === '\n') i++;
-      continue;
-    }
-    if (!inQuotes && ch === ','){ row.push(cur); cur = ''; continue; }
-    cur += ch;
-  }
-  if (cur !== '' || row.length) { row.push(cur); rows.push(row.map(c=>c.trim())); }
-  return rows.filter(r => r.some(c => c !== ''));
-}
+/* === parse + normalização + formatação === */
+function parseCSV(t){const r=[],n=(t||"").split(/\r?\n/);for(const e of n){if(!e.trim())continue;const i=[],a=e.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)||[];for(let o of a)i.push(o.replace(/^"|"$/g,"").trim());r.push(i)}return r}
+function normalize(s){return s?String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase():""}
+function toNumber(v){if(v==null)return 0;let s=String(v).replace(/\s|R\$|r\$|%/g,"");if(s.includes(".")&&s.includes(","))s=s.replace(/\./g,"").replace(/,/g,".");else if(s.includes(","))s=s.replace(/,/g,".");else s=s.replace(/\./g,"");const n=parseFloat(s);return isNaN(n)?0:n}
+function formatBR(v){return(toNumber(v)).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function findExactHeader(r){for(let i=0;i<r.length;i++){const n=r[i].map(c=>normalize(c));if(n.some(c=>c.includes("dias trabalh")||c.includes("pago total")||c.includes("pago hoje")||c.includes("projecao")||c.includes("projeção")))return{headerIdx:i,norm:n}}return null}
+async function fetchAndParse(u){try{const r=await fetch(u+(u.includes("?")?"&":"?")+"nocache="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);return parseCSV(await r.text())}catch(e){console.error("fetch error",u,e);return null}}
 
-/* normalize textual header matching */
-function normalize(s){ return s? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase() : ''; }
-
-/* converte strings monetárias/percentuais para número corretamente */
-function toNumber(v){
-  if(v===undefined || v===null) return 0;
-  if(typeof v === 'number') return isFinite(v)?v:0;
-  let s = String(v).trim();
-  if(!s) return 0;
-  // remove espaços e símbolos
-  s = s.replace(/\s/g,'').replace(/R\$|r\$|%/g,'');
-  // tratar formatos com ponto e vírgula
-  if(s.indexOf('.') !== -1 && s.indexOf(',') !== -1){
-    // ex: 83.500,00 -> remove pontos (milhar) e troca vírgula por ponto (decimal)
-    s = s.replace(/\./g,'').replace(/,/g,'.');
-  } else if(s.indexOf(',') !== -1 && s.indexOf('.') === -1){
-    // ex: 65035,39 -> troca vírgula por ponto
-    s = s.replace(/,/g,'.');
-  } else {
-    // ex: 83500 or 83500.00 -> remove possíveis pontos de milhar
-    s = s.replace(/\./g,'');
-  }
-  const n = parseFloat(s);
-  return isNaN(n) ? 0 : n;
-}
-
-/* formato BR pra exibir */
-function formatBR(v){ return (typeof v === 'number' ? v : toNumber(v)).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2}); }
-
-/* busca linha de cabeçalho que contenha keywords relevantes */
-function findExactHeader(rows){
-  for(let i=0;i<rows.length;i++){
-    const norm = rows[i].map(c => normalize(c));
-    if(norm.some(c => c.includes('dias trabalh') || c.includes('pago total') || c.includes('pago hoje') || c.includes('projecao') || c.includes('projeção'))){
-      return { headerIdx: i, norm };
-    }
-  }
-  return null;
-}
-
-/* fetch + parse com cache-bypass */
-async function fetchAndParse(url){
-  try{
-    const res = await fetch(url + (url.includes('?') ? '&' : '?') + "nocache=" + Date.now(), { cache: 'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const txt = await res.text();
-    return parseCSV(txt);
-  }catch(e){
-    console.error('fetch error for', url, e);
-    return null;
-  }
-}
-
-/* carrega todas as fontes e também a aba destaque */
 async function loadAll(){
-  // carregar cada fonte (cartela)
   for(const f of fontes){
-    const rows = await fetchAndParse(f.url);
-    if(!rows){ cache[f.id] = null; continue; }
-
-    // meta: procura linha que contenha "meta" na primeira coluna
-    const metaRow = rows.find(r => normalize(r[0] || '').includes('meta'));
-    const meta = metaRow ? toNumber(metaRow[1]) : 0;
-
-    // procurar cabeçalho e extrair valores relativos
-    const headerInfo = findExactHeader(rows);
-    let total = 0, lastPay = 0, projPercent = 0;
-    if(headerInfo){
-      const { headerIdx, norm } = headerInfo;
-      const dataRow = rows[headerIdx + 1] || [];
-      const idxProj = norm.findIndex(c => c.includes('projecao') || c.includes('projeção'));
-      const idxTotal = norm.findIndex(c => c.includes('pago total') || c.includes('valor total') || c.includes('pago total'));
-      const idxHoje  = norm.findIndex(c => c.includes('pago hoje') || c.includes('pagohoje'));
-      if(idxTotal >= 0) total = toNumber(dataRow[idxTotal]);
-      if(idxHoje  >= 0) lastPay = toNumber(dataRow[idxHoje]);
-      if(idxProj  >= 0){
-        // projeção na planilha pode vir como valor monetário ou percentual — considerar meta se necessário
-        const projVal = dataRow[idxProj];
-        // se é número monetário, calculamos percentual em relação à meta; se já é percentual, só pegamos
-        if(String(projVal).includes('%')) projPercent = Math.round(toNumber(projVal));
-        else projPercent = meta ? Math.round((toNumber(projVal) / meta) * 100) : Math.round(toNumber(projVal));
-      }
-    }
-    cache[f.id] = { meta, total, projPercent, lastPay };
+    const rows=await fetchAndParse(f.url);if(!rows){cache[f.id]=null;continue;}
+    const metaRow=rows.find(r=>normalize(r[0]).includes("meta"));const meta=metaRow?toNumber(metaRow[1]):0;
+    const h=findExactHeader(rows);let total=0,last=0,proj=0;
+    if(h){const d=rows[h.headerIdx+1]||[],n=h.norm,ip=n.findIndex(c=>c.includes("projecao")||c.includes("projeção")),it=n.findIndex(c=>c.includes("pago total")||c.includes("valor total")),ih=n.findIndex(c=>c.includes("pago hoje"));if(it>=0)total=toNumber(d[it]);if(ih>=0)last=toNumber(d[ih]);if(ip>=0){const v=d[ip];proj=String(v).includes("%")?Math.round(toNumber(v)):meta?Math.round(toNumber(v)/meta*100):Math.round(toNumber(v));}}
+    cache[f.id]={meta,total,projPercent:proj,lastPay:last};
   }
-
-  // carregar destaque da cobrança (aba dedicada)
-  const destaqueRows = await fetchAndParse(DESTAQUE_URL);
-  if(destaqueRows && destaqueRows.length > 1){
-    // assumir primeira linha = cabeçalho, segunda linha = dados do destaque
-    const headers = destaqueRows[0].map(h => h.trim());
-    const first = destaqueRows[1];
-    destaqueInfo = Object.fromEntries(first.map((v,i)=>[headers[i] || `col${i}`, v.trim()]));
-    // normalizar chaves conhecidas (aceitar variações)
-    // ex: Nome, Foto URL, Mensagem
-    // já usamos direto as chaves mais prováveis abaixo (Nome / Foto URL / Mensagem)
-  } else {
-    destaqueInfo = null;
-  }
-
-  document.getElementById('loading-indicator').style.display = 'none';
-  preparePages();
-  showPage(0);
-  // manter troca automática
-  setInterval(nextPage, PAGE_DURATION);
+  const dr=await fetchAndParse(DESTAQUE_URL);
+  if(dr&&dr.length>1){const h=dr[0].map(x=>x.trim()),d=dr[1];destaqueInfo=Object.fromEntries(d.map((v,i)=>[h[i],v.trim()]))}
+  document.getElementById("loading-indicator").style.display="none";
+  preparePages();showPage(0);
+  setInterval(nextPage,PAGE_DURATION);
 }
 
-/* cria card padrão por carteira */
-function createCard(f){
-  const d = cache[f.id];
-  const card = document.createElement('div');
-  card.className = 'card';
-  if(!d){ card.innerHTML = `<div class="title">${f.id}</div><div>Sem dados</div>`; }
-  else{
-    card.innerHTML = `
-      <div class="title">${f.id}</div>
-      <div class="info">
-        <div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
-        <div><strong>Valor Total Captado:</strong> ${formatBR(d.total)}</div>
-        <div><strong>Projeção:</strong> ${d.projPercent}%</div>
-        <div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div>
-      </div>
-    `;
-  }
-  return card;
-}
+/* === render === */
+function createCard(f){const d=cache[f.id];const c=document.createElement("div");c.className="card";
+if(!d){c.innerHTML=`<div class="title">${f.id}</div><div>Sem dados</div>`;}
+else{c.innerHTML=`<div class="title">${f.id}</div><div class="info">
+<div><strong>Meta Mês:</strong> ${formatBR(d.meta)}</div>
+<div><strong>Valor Total Captado:</strong> ${formatBR(d.total)}</div>
+<div><strong>Projeção:</strong> ${d.projPercent}%</div>
+<div><strong>Pagos Hoje:</strong> ${formatBR(d.lastPay)}</div></div>`;}return c;}
 
-/* cria o card do destaque usando os campos da planilha */
 function createDestaqueCard(){
-  const nome = (destaqueInfo && (destaqueInfo['Nome'] || destaqueInfo['nome'] || destaqueInfo['Name'])) || "Colaborador(a) em destaque";
-  const foto = (destaqueInfo && (destaqueInfo['Foto URL'] || destaqueInfo['Foto'] || destaqueInfo['FotoURL'] || destaqueInfo['foto url'] )) || "destaque.jpg";
-  const msg  = (destaqueInfo && (destaqueInfo['Mensagem'] || destaqueInfo['mensagem'] || destaqueInfo['Mensagem da Semana'])) || "Parabéns pelo excelente desempenho na semana!";
-  const card = document.createElement('div');
-  card.className = 'destaque-semana';
-  card.innerHTML = `
-    <div class="destaque-card">
-      <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
-      <img src="${foto}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
-      <h2>${nome}</h2>
-      <div class="estrelas">★★★★★</div>
-      <p>${msg}</p>
-    </div>
-  `;
-  return card;
+  const n=(destaqueInfo&&(destaqueInfo["Nome"]||destaqueInfo["nome"]))||"Colaborador(a) em destaque";
+  const f=(destaqueInfo&&(destaqueInfo["Foto URL"]||destaqueInfo["Foto"]||destaqueInfo["foto url"]))||"destaque.jpg";
+  const m=(destaqueInfo&&(destaqueInfo["Mensagem"]||destaqueInfo["mensagem"]))||"Parabéns pelo excelente desempenho na semana!";
+  const c=document.createElement("div");c.className="destaque-semana";
+  c.innerHTML=`<div class="destaque-card">
+  <h1>🌟 Destaque da Semana - Cobrança 🌟</h1>
+  <img src="${f}" alt="Destaque" class="foto-destaque" onerror="this.src='destaque.jpg'">
+  <h2>${n}</h2><div class="estrelas">★★★★★</div><p>${m}</p></div>`;return c;
 }
 
-/* prepara as pages mantendo mesmo layout que você já tinha */
 function preparePages(){
-  pages = [
-    ["CREF19","CREF20","CREF21"].map(id => createCard(fontes.find(f=>f.id===id))),
-    ["CRTR02","CRTR08","CRTR15","CRN11"].map(id => createCard(fontes.find(f=>f.id===id))),
-    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id)))
+  pages=[
+    ["CREF19","CREF20","CREF21"].map(i=>createCard(fontes.find(f=>f.id===i))),
+    ["CRTR02","CRTR08","CRTR15","CRN11"].map(i=>createCard(fontes.find(f=>f.id===i))),
+    ["AMMV - PIX","AMMV - ENEL","STCASA"].map(i=>createCard(fontes.find(f=>f.id===i))),
+    [createDestaqueCard()]
   ];
-
-  // adicionar a página de destaque (como única "card" na página)
-  pages.push([createDestaqueCard()]);
 }
 
-/* exibe página */
-function showPage(pageIdx){
-  currentPage = pageIdx;
-  const main = document.getElementById('main-content');
-  main.innerHTML = '';
-  const cards = pages[pageIdx];
-  if(!cards) return;
-  main.style.gridTemplateColumns = `repeat(${cards.length}, 1fr)`;
-  cards.forEach(c => main.appendChild(c));
-}
-
-/* próximo */
-function nextPage(){
-  const nextIdx = (currentPage +1) % pages.length;
-  showPage(nextIdx);
-}
-
-/* atualização full reload a cada 2 minutos (mantive seu comportamento original) */
-setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 120000); // 2 minutos
-
-/* iniciar */
+function showPage(i){currentPage=i;const m=document.getElementById("main-content");m.innerHTML="";const c=pages[i];if(!c)return;m.style.gridTemplateColumns=`repeat(${c.length},1fr)`;c.forEach(e=>m.appendChild(e));}
+function nextPage(){showPage((currentPage+1)%pages.length);}
+setInterval(()=>{window.location.replace(window.location.pathname+"?_="+Date.now())},120000);
 loadAll();
+
+/* === clique manual para avançar === */
+document.addEventListener("click",()=>{
+  currentPage=(currentPage+1)%pages.length;
+  showPage(currentPage);
+});
 </script>
 </body>
 </html>
