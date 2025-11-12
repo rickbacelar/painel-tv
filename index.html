@@ -272,9 +272,11 @@ function renderAll(){
       <div class="title">${f.id}</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;justify-content:center;text-align:center;">
         <div><strong>Meta Mês:</strong> ${formatBR(meta)}</div>
+        <div><strong>Pago Total:</strong> ${formatBR(total)}</div>
         <div><strong>Projeção:</strong> ${projPercent}%</div>
         <div><strong>Pagos Hoje:</strong> ${formatBR(lastPay)}</div>
       </div>
+
       <div class="table-wrap">
         <table class="table">
           <thead><tr>
