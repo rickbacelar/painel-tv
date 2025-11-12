@@ -52,9 +52,9 @@ header{
   width:auto;
   object-fit:contain;
   margin-right:6px;
-  background:white;       /* fundo branco */
-  border-radius:6px;      /* bordas levemente arredondadas */
-  padding:3px;            /* dá um respiro entre o fundo branco e a logo */
+  background:white;
+  border-radius:6px;
+  padding:3px;
 }
 
 /* layout principal */
@@ -76,7 +76,6 @@ header{
   box-shadow:0 6px 18px rgba(0,0,0,0.06);
   flex:1 1 300px;
   max-width:480px;
-
   display:flex;
   flex-direction:column;
   min-height:0;
@@ -97,12 +96,11 @@ header{
   overflow:auto;
   margin-top:6px;
 }
-
 .table{
   width:100%;
   border-collapse:collapse;
   margin-top:4px;
-  text-align:center; /* centraliza tudo por padrão */
+  text-align:center;
 }
 .table th{
   text-align:center;
@@ -118,7 +116,6 @@ header{
   border-bottom:1px dashed #f0f0f0;
   font-size:14px;
 }
-
 
 /* rodapé */
 .footer{
@@ -143,7 +140,6 @@ header{
       <div class="logo-dot"></div>
       <div>Painel de Resultados</div>
     </div>
-    
   </header>
 
   <div class="main" id="main-content">
@@ -165,10 +161,10 @@ const fontes = [
   { id: "CRN11", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1667393760&single=true&output=csv" }
 ];
 
-const REFRESH_MS = 5000;
+const REFRESH_MS = 10000; // atualiza dados a cada 10 segundos
 let cache = {};
 
-// FUNÇÕES AUXILIARES
+// --- PARSER CSV ---
 function parseCSV(text) {
   const rows=[];
   const lines=text.split(/\r?\n/).filter(l=>l.trim()!=="");
@@ -196,7 +192,6 @@ function toNumber(v){
 
 async function fetchAndParse(url){
   try{
-    // adiciona parâmetro único para burlar cache do Google
     const fullUrl = url + "&nocache=" + Date.now() + "_" + Math.random();
     const res = await fetch(fullUrl, { cache: "no-store" });
     if(!res.ok) throw new Error("HTTP " + res.status);
@@ -207,20 +202,17 @@ async function fetchAndParse(url){
   }
 }
 
-
 function formatBR(value){
   return value?.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0})||"R$ 0";
 }
 
-// CARREGAMENTO DOS DADOS
+// --- CARREGAMENTO DOS DADOS ---
 async function loadAll(){
   for(const f of fontes){
     const rows = await fetchAndParse(f.url);
     if(!rows){ cache[f.id]=null; continue; }
 
     const meta = rows[1] && rows[1][1] ? toNumber(rows[1][1]) : 0;
-
-    const projRaw = rows[5] && rows[5][4] ? toNumber(rows[5][4]) : 0;
 
     let headerIdx = rows.findIndex(r=>r.some(c=>String(c).toLowerCase().includes("data")));
     if(headerIdx==-1) headerIdx=6;
@@ -243,14 +235,14 @@ async function loadAll(){
 
     const projPercent = meta ? Math.round((total/meta)*100) : 0;
 
-    cache[f.id]={headers, parsed, meta, projPercent, lastPay};
+    cache[f.id]={headers, parsed, meta, projPercent, lastPay, total};
   }
 
   document.getElementById("loading-indicator").style.display="none";
   renderAll();
 }
 
-// RENDERIZAÇÃO
+// --- RENDERIZAÇÃO ---
 function renderAll(){
   const main=document.getElementById("main-content");
   main.innerHTML="";
@@ -266,7 +258,7 @@ function renderAll(){
       return;
     }
 
-    const {parsed, meta, projPercent, lastPay} = data;
+    const {parsed, meta, projPercent, lastPay, total} = data;
 
     card.innerHTML=`
       <div class="title">${f.id}</div>
@@ -297,16 +289,13 @@ function renderAll(){
   });
 }
 
-// inicialização
+// --- INICIALIZAÇÃO ---
 loadAll();
 setInterval(loadAll, REFRESH_MS);
 
-// --- Forçar reload completo da página a cada 10s (10000 ms)
-// Usa location.replace com um parâmetro _=timestamp para forçar cache-busting
-// e não poluir o histórico do navegador.
+// --- Recarrega página inteira a cada 10 minutos ---
 const RELOAD_MS = 600000;
 setInterval(() => {
-  // monta a URL atual sem o parâmetro _ antigo
   const urlBase = window.location.pathname + window.location.search.replace(/([?&])_=[^&]*/,'');
   const separator = urlBase.includes('?') ? '&' : '?';
   const newUrl = urlBase + separator + '_=' + Date.now();
