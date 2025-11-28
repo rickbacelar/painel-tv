@@ -550,7 +550,7 @@ function showPage(idx){
 function nextPage(){ showPage((currentPage+1) % pages.length); }
 
 /* ------------- auto reload and click advance ------------- */
-setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 120000); // 2 min refresh
+setInterval(()=>{ window.location.replace(window.location.pathname + '?_=' + Date.now()); }, 240000); // 2 min refresh
 document.addEventListener('click', ()=> nextPage());
 
 /* ------------- start ------------- */
