@@ -129,6 +129,28 @@ header{
   line-height:1.4;
 }
 
+/* grid de fotos das páginas de monitoria */
+.photo-grid{
+  width:100%;
+  display:grid;
+  gap:18px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items:start;
+  padding:20px;
+  box-sizing:border-box;
+}
+.photo-card{
+  border-radius:18px;
+  overflow:hidden;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:200px;
+  height:320px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+.photo-card img{ width:100%; height:100%; object-fit:cover; display:block; }
 
 /* efeito de clique (leve flash visual) */
 body:active {
@@ -168,7 +190,11 @@ const fontes = [
   { id: "AMMV - ENEL", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=393476796&single=true&output=csv" },
   { id: "STCASA", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=808693567&single=true&output=csv" }
 ];
+// DESTAQUE original (nome, foto, mensagem)
 const DESTAQUE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1188185218&single=true&output=csv";
+// NOVA aba com as fotos das monitorias (você forneceu esse link)
+const DESTAQUE_FOTOS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRZt529CoSQvc13l8kopidVIRoEMCHSLFy9A-xJ9Ij440qac25VRLjDjPpskRPBOA/pub?gid=1257542704&single=true&output=csv";
+
 const PAGE_DURATION = 30000; // 30s
 
 /* ------------- STATE ------------- */
@@ -176,6 +202,13 @@ let cache = {};
 let pages = [];
 let currentPage = 0;
 let destaqueInfo = null;
+
+// monitoriaFotos armazenará arrays de links para cada coluna
+let monitoriaFotos = {
+  foto_monitoria1: [],
+  foto_monitoria2: [],
+  foto_monitoria3: []
+};
 
 /* ------------- UTIL ------------- */
 function parseCSV(text) {
@@ -368,6 +401,29 @@ async function loadAll(){
     destaqueInfo = null;
   }
 
+  // --- NOVO: carregar a aba de fotos (DESTAQUE_FOTOS_URL)
+  console.log('Carregando fotos de monitoria:', DESTAQUE_FOTOS_URL);
+  const fotosRows = await fetchAndParse(DESTAQUE_FOTOS_URL);
+  console.log('Preview fotos:', fotosRows && fotosRows.slice(0,6));
+  monitoriaFotos = { foto_monitoria1: [], foto_monitoria2: [], foto_monitoria3: [] };
+  if(fotosRows && fotosRows.length>0){
+    // cabeçalho
+    const headersFotos = fotosRows[0].map(h => normalize(h));
+    const idx1 = headersFotos.indexOf('foto_monitoria1');
+    const idx2 = headersFotos.indexOf('foto_monitoria2');
+    const idx3 = headersFotos.indexOf('foto_monitoria3');
+
+    for(let i=1;i<fotosRows.length;i++){
+      const row = fotosRows[i];
+      if(idx1 !== -1 && row[idx1] && row[idx1].trim()) monitoriaFotos.foto_monitoria1.push(row[idx1].trim());
+      if(idx2 !== -1 && row[idx2] && row[idx2].trim()) monitoriaFotos.foto_monitoria2.push(row[idx2].trim());
+      if(idx3 !== -1 && row[idx3] && row[idx3].trim()) monitoriaFotos.foto_monitoria3.push(row[idx3].trim());
+    }
+    console.log('Fotos capturadas:', monitoriaFotos);
+  } else {
+    console.warn('Nenhuma foto encontrada ou erro ao ler DESTAQUE_FOTOS_URL');
+  }
+
   document.getElementById('loading-indicator').style.display = 'none';
   preparePages();
   showPage(0);
@@ -424,6 +480,36 @@ function createDestaqueCard(){
   return div;
 }
 
+/* helpers para fotos */
+function normalizeDriveLink(url){
+  if(!url) return '';
+  if(url.includes('drive.google.com')){
+    const idMatch = url.match(/[-\w]{25,}/);
+    if(idMatch) return `https://drive.google.com/uc?id=${idMatch[0]}`;
+  }
+  return url;
+}
+function createPhotoGrid(links){
+  const wrapper = document.createElement('div');
+  wrapper.className = 'photo-grid';
+  links.forEach(l => {
+    let url = l;
+    if(!url) return;
+    url = normalizeDriveLink(url);
+    // anti-cache
+    url += (url.includes('?') ? '&t=' : '?t=') + Date.now();
+    const card = document.createElement('div');
+    card.className = 'photo-card';
+    const img = document.createElement('img');
+    img.src = url;
+    img.referrerPolicy = 'no-referrer';
+    img.onerror = function(){ this.style.opacity = '0.25'; };
+    card.appendChild(img);
+    wrapper.appendChild(card);
+  });
+  return wrapper;
+}
+
 function preparePages(){
   pages = [
     ["CREF19","CREF20","CREF21"].map(id => createCard(fontes.find(f=>f.id===id))),
@@ -431,6 +517,12 @@ function preparePages(){
     ["AMMV - PIX","AMMV - ENEL","STCASA"].map(id => createCard(fontes.find(f=>f.id===id))),
     [createDestaqueCard()]
   ];
+
+  // adicionar 3 páginas de fotos (uma por coluna)
+  // cada "page" é um array de elementos DOM — aqui adicionamos um container único por página
+  pages.push([ (function(){ const div = document.createElement('div'); div.appendChild(createPhotoGrid(monitoriaFotos.foto_monitoria1)); return div; })() ]);
+  pages.push([ (function(){ const div = document.createElement('div'); div.appendChild(createPhotoGrid(monitoriaFotos.foto_monitoria2)); return div; })() ]);
+  pages.push([ (function(){ const div = document.createElement('div'); div.appendChild(createPhotoGrid(monitoriaFotos.foto_monitoria3)); return div; })() ]);
 }
 
 function showPage(idx){
@@ -439,7 +531,9 @@ function showPage(idx){
   main.innerHTML = '';
   const cards = pages[idx];
   if(!cards) return;
-  main.style.gridTemplateColumns = `repeat(${cards.length}, 1fr)`;
+  // se houver apenas 1 elemento (página de foto ou destaque), usar 1 coluna
+  const cols = cards.length <= 1 ? 1 : cards.length;
+  main.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   cards.forEach(c=> main.appendChild(c));
 }
 function nextPage(){ showPage((currentPage+1) % pages.length); }
