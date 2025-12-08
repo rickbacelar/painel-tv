@@ -267,26 +267,48 @@ let monitoriaFotos = {
 function createRecessoPage() {
   const hoje = new Date();
   const anoAtual = hoje.getFullYear();
-  const recesso = new Date(anoAtual, 11, 23); // 23 de dezembro
+  let recesso = new Date(anoAtual, 11, 23); // 23/12
 
+  // se já passou, vai contar para o próximo ano
   if (hoje > recesso) {
-    recesso.setFullYear(anoAtual + 1);
+    recesso = new Date(anoAtual + 1, 11, 23);
   }
 
-  const diff = Math.ceil((recesso - hoje) / (1000 * 60 * 60 * 24));
+  function diasUteisEntre(inicio, fim) {
+    let count = 0;
+    let data = new Date(inicio);
+
+    // zerar horas para comparação correta
+    data.setHours(0, 0, 0, 0);
+    fim = new Date(fim);
+    fim.setHours(0, 0, 0, 0);
+
+    while (data <= fim) {
+      const dia = data.getDay(); // 0-dom, 6-sáb
+      if (dia !== 0 && dia !== 6) {
+        count++;
+      }
+      data.setDate(data.getDate() + 1);
+    }
+
+    return count;
+  }
+
+  const diasUteis = diasUteisEntre(hoje, recesso);
 
   const div = document.createElement("div");
   div.className = "recesso-wrapper";
 
   div.innerHTML = `
     <div class="recesso-title">Recesso</div>
-    <div class="recesso-number">${diff}</div>
-    <div class="recesso-label">dia(s) restantes</div>
+    <div class="recesso-number">${diasUteis}</div>
+    <div class="recesso-label">dia(s) úteis restantes</div>
     <div class="recesso-date">Recesso em 23/12</div>
   `;
 
   return div;
 }
+
 
 
 /* ------------- UTIL ------------- */
